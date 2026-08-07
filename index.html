@@ -137,15 +137,6 @@
             opacity: 0.8;
         }
 
-        .type-local { background: #0000ff; color: #fff; }
-        .type-semi { background: #9acd32; color: #000; }
-        .type-rapid { background: #00bfff; color: #000; }
-        .type-express { background: #ff0000; color: #fff; }
-        .type-airport { background: #000000; color: #ff8c00; }
-        .type-rapid-express { background: #ff8c00; color: #fff; }
-        .type-limited-express { background: #800080; color: #ffd700; }
-        .type-default { background: #0073eb; color: #fff; }
-
         .nankai-staf-body-container {
             border: 2px solid #000;
             display: flex;
@@ -228,7 +219,6 @@
         }
         .end-btn { background: #333; color: #fff; border: 1px solid #555; font-size: 10px; padding: 4px 8px; cursor: pointer; border-radius: 3px; width: auto; margin: 0; }
 
-        /* --- 懐中時計風ウィジェットのデザイン --- */
         .pocket-watch-widget {
             display: flex;
             align-items: center;
@@ -268,7 +258,6 @@
             font-weight: bold;
         }
 
-        /* --- 懐中時計ポップアップ拡大画面 --- */
         #watch-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -351,7 +340,6 @@
         
         .train-select-row { display: flex; gap: 4px; }
         
-        /* 指令・乗務員通話パネル用スタイル */
         .comms-panel {
             background: #0a141e;
             border: 1px solid #FFD700;
@@ -383,7 +371,6 @@
 </head>
 <body>
 
-<!-- 懐中時計拡大ポップアップモーダル -->
 <div id="watch-modal" onclick="closeWatchModal()">
     <div class="big-watch-case" onclick="event.stopPropagation()">
         <div class="big-watch-crown"></div>
@@ -418,7 +405,7 @@
 </div>
 
 <div id="app">
-    <h1 style="font-size: 1.4em; margin: 5px 0;">運行補助ツール（全種別対応）</h1>
+    <h1 style="font-size: 1.4em; margin: 5px 0;">運行補助ツール（路線別種別対応）</h1>
     <div id="login-zone">
         <div class="role-tabs">
             <div id="tab-driver" class="role-tab active" onclick="switchRoleTab('driver')">運転士モード</div>
@@ -426,6 +413,13 @@
             <div id="tab-shirei" class="role-tab" onclick="switchRoleTab('shirei')">指令室</div>
         </div>
         <input type="hidden" id="role-select" value="driver">
+
+        <label style="font-size:0.8em; text-align:left; display:block; margin-top:4px;">鉄道ネットワーク（路線データ）選択:</label>
+        <select id="railway-network-select" onchange="changeRailwayNetwork()" style="margin: 2px 0; background: #002244; color: #FFD700; font-weight: bold;">
+            <option value="robutsu">尾羽急</option>
+            <option value="fictional_b">？？？ (B線)</option>
+            <option value="fictional_c">？？？ (C線)</option>
+        </select>
 
         <div id="train-input-container">
             <label style="font-size:0.8em; text-align:left; display:block;">担当列車番号 (自由入力可能):</label>
@@ -437,24 +431,6 @@
         <div id="driver-setting">
             <div style="display: flex; gap: 4px;">
                 <select id="train-type-select" style="flex: 2; margin: 2px 0;">
-                    <option value="各駅停車">各駅停車</option>
-                    <option value="準急">準急</option>
-                    <option value="快速">快速</option>
-                    <option value="急行">急行</option>
-                    <option value="区間急行">区間急行</option>
-                    <option value="空港急行">空港急行</option>
-                    <option value="快速急行">快速急行</option>
-                    <option value="特急（やまかぜ）">特急（やまかぜ）</option>
-                    <option value="特急（AIR特急）">特急（AIR特急）</option>
-                    <option value="特急（つばき）">特急（つばき）</option>
-                    <option value="特急（スーパーつばき）">特急（スーパーつばき）</option>
-                    <option value="特急（あさかぜ）">特急（あさかぜ）</option>
-                    <option value="特急（いとい）">特急（いとい）</option>
-                    <option value="特急（ほしみ）">特急（ほしみ）</option>
-                    <option value="特急（はね）">特急（はね）</option>
-                    <option value="臨時">臨時</option>
-                    <option value="回送">回送</option>
-                    <option value="試運転">試運転</option>
                 </select>
                 <select id="car-count-select" style="flex: 1; margin: 2px 0;">
                     <option value="2両">2両</option>
@@ -492,7 +468,6 @@
     </div>
 
     <div id="main-zone" class="hidden">
-        <!-- 指令ツールエリア（指令室用） -->
         <div id="shirei-tools" class="hidden">
             <input id="target-train-input" placeholder="対象列車">
             <button onclick="sendAlert('SPECIFIC')">特定列車防護</button>
@@ -502,7 +477,6 @@
             <button onclick="resetAlert()" style="background: #f00; color: #fff;">全解除</button>
         </div>
 
-        <!-- 運転士・車掌用防護発報・解除エリア -->
         <div id="driver-alert-tools" class="hidden" style="background: #0a141e; border: 1px solid #FFD700; padding: 8px; border-radius: 5px; margin-bottom: 6px; font-size: 12px;">
             <div style="font-weight: bold; margin-bottom: 4px;">🚨 防護無線操作</div>
             <div style="display: flex; gap: 4px; margin-bottom: 4px;">
@@ -513,7 +487,6 @@
             </div>
         </div>
 
-        <!-- 運転士・車掌・指令共通の通信（メッセージ送信）パネル -->
         <div class="comms-panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                 <div style="font-weight: bold;">📞 指令通話・メッセージシステム</div>
@@ -521,7 +494,6 @@
             </div>
             <div id="comms-log" class="comms-log">通信ログ待機中...</div>
             
-            <!-- 全列車から自由にメッセージを送れる共通送信コントロール -->
             <div style="display: flex; gap: 4px; margin-top: 4px;">
                 <select id="msg-target-select" style="flex: 1; margin:0; font-size:11px;">
                     <option value="指令室">指令室へ送信</option>
@@ -531,7 +503,6 @@
                 <button onclick="sendCustomMessage()" style="background:#0073eb; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:auto; padding:4px 8px;">送信</button>
             </div>
 
-            <!-- NGワード設定パネル（運転士・車掌・指令から設定可能） -->
             <div class="ng-config-box">
                 <div style="font-weight: bold; margin-bottom: 2px; color: #FFD700;">⚙️ NGワード設定（カンマ区切りで入力）</div>
                 <div style="display: flex; gap: 4px;">
@@ -547,24 +518,6 @@
             <p style="margin: 0 0 4px 0; font-size: 0.85em; font-weight: bold;">ダイヤ・行路の変更</p>
             <div style="display: flex; gap: 4px;">
                 <select id="re-train-type" style="flex: 2; margin: 2px 0;">
-                    <option value="各駅停車">各駅停車</option>
-                    <option value="準急">準急</option>
-                    <option value="快速">快速</option>
-                    <option value="急行">急行</option>
-                    <option value="区間急行">区間急行</option>
-                    <option value="空港急行">空港急行</option>
-                    <option value="快速急行">快速急行</option>
-                    <option value="特急（やまかぜ）">特急（やまかぜ）</option>
-                    <option value="特急（AIR特急）">特急（AIR特急）</option>
-                    <option value="特急（つばき）">特急（つばき）</option>
-                    <option value="特急（スーパーつばき）">特急（スーパーつばき）</option>
-                    <option value="特急（あさかぜ）">特急（あさかぜ）</option>
-                    <option value="特急（いとい）">特急（いとい）</option>
-                    <option value="特急（ほしみ）">特急（ほしみ）</option>
-                    <option value="特急（はね）">特急（はね）</option>
-                    <option value="臨時">臨時</option>
-                    <option value="回送">回送</option>
-                    <option value="試運転">試運転</option>
                 </select>
                 <select id="re-car-count" style="flex: 1; margin: 2px 0;">
                     <option value="2両">2両</option>
@@ -602,7 +555,7 @@
                         <div>定時運行を遵守</div>
                     </div>
                     <div class="nankai-train-info-area">
-                        <div id="staf-type-banner" class="nankai-type-banner type-default">
+                        <div id="staf-type-banner" class="nankai-type-banner">
                             <span class="nankai-direction">下り</span>
                             <span id="staf-train-type-text">各駅停車</span>
                         </div>
@@ -647,84 +600,113 @@
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
 <script>
-    const lines = {
-        main: ["尾羽原", "井口", "梅郷", "雲中", "安越", "十川真砂橋", "千峰", "南雲谷", "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥"],
-        rapid_line: ["千鳥", "問屋町", "問屋蔵前", "赤堀大沢", "赤堀", "新赤堀", "塚野", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"],
-        oba_branch: ["北尾羽", "尾羽原"],
-        airport: ["高徳", "新高徳", "高徳整備場北", "高徳空港"],
-        link: ["南千鳥", "問屋町"],
-        chidori_branch: ["千鳥", "南千鳥", "奥千鳥", "千鳥山道", "本郷神宮前", "本郷"],
-        itoi: ["井口", "上井口", "参田町", "東本郷", "本郷", "西問屋町", "問屋町"],
-        tobigane: ["梅郷", "雲中", "水橋", "飛岡", "垂岡", "飛水竜田", "南竜田", "大原", "新塚", "飛水柏原", "上金田", "金田新都心"],
-        kanada: ["金田", "鵲橋", "金田市", "金田空港", "金田新都心"],
-        hakokura_link: ["百鳥", "南箱倉", "新箱倉金田", "金田市"]
+    // 鉄道ネットワークごとに種別ごとのカラー設定（styleプロパティ）を内包できるように拡張
+    const railwayNetworks = {
+        robutsu: {
+            name: "尾羽急",
+            lines: {
+                main: ["尾羽原", "井口", "梅郷", "雲中", "安越", "十川真砂橋", "千峰", "南雲谷", "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥"],
+                rapid_line: ["千鳥", "問屋町", "問屋蔵前", "赤堀大沢", "赤堀", "新赤堀", "塚野", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"],
+                oba_branch: ["北尾羽", "尾羽原"],
+                airport: ["高徳", "新高徳", "高徳整備場北", "高徳空港"],
+                link: ["南千鳥", "問屋町"],
+                chidori_branch: ["千鳥", "南千鳥", "奥千鳥", "千鳥山道", "本郷神宮前", "本郷"],
+                itoi: ["井口", "上井口", "参田町", "東本郷", "本郷", "西問屋町", "問屋町"],
+                tobigane: ["梅郷", "雲中", "水橋", "飛岡", "垂岡", "飛水竜田", "南竜田", "大原", "新塚", "飛水柏原", "上金田", "金田新都心"],
+                kanada: ["金田", "鵲橋", "金田市", "金田空港", "金田新都心"],
+                hakokura_link: ["百鳥", "南箱倉", "新箱倉金田", "金田市"]
+            },
+            // 各種別の停車駅ルールと色を指定 (bg: 背景色, color: 文字色)
+            trainTypeSettings: {
+                "各駅停車": { stopRule: "ALL", bg: "#0000ff", color: "#fff" },
+                "準急": { 
+                    stopRule: ["尾羽原", "井口", "雲中", "安越", "千峰", "雲谷", "長峰", "高徳", "舞子台", "紀田", "千鳥", "問屋町", "赤堀", "金田", "百鳥", "支線尾羽", "北尾羽"], 
+                    bg: "#9acd32", color: "#000" 
+                },
+                "快速": { 
+                    stopRule: ["尾羽原", "井口", "雲中", "安越", "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥", "高徳整備場北", "高徳空港", "水橋", "飛岡", "飛水竜田", "南竜田", "新塚", "飛水柏原", "上金田", "金田新都心", "参田町", "本郷", "問屋町"], 
+                    bg: "#00bfff", color: "#000" 
+                },
+                "急行": { stopRule: ["尾羽原", "井口", "安越", "雲谷", "高徳", "紀田", "千鳥", "金田", "百鳥", "支線尾羽", "北尾羽", "金田空港", "金田新都心", "本郷"], bg: "#ff0000", color: "#fff" },
+                "区間急行": { stopRule: ["尾羽原", "井口", "安越", "雲谷", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"], bg: "#00bfff", color: "#000" },
+                "空港急行": { stopRule: ["尾羽原", "安越", "高徳", "高徳空港"], bg: "#000000", color: "#ff8c00" },
+                "快速急行": { stopRule: ["尾羽原", "高徳", "紀田", "千鳥", "金田", "百鳥", "北尾羽", "金田市", "金田新都心"], bg: "#ff8c00", color: "#fff" },
+                "特急（やまかぜ）": { stopRule: ["尾羽原", "安越", "高徳", "紀田", "千鳥", "百鳥", "北尾羽"], bg: "#800080", color: "#ffd700" },
+                "特急（AIR特急）": { stopRule: ["尾羽原", "高徳", "千鳥", "金田", "金田空港", "金田新都心", "高徳空港"], bg: "#800080", color: "#ffd700" },
+                "特急（つばき）": { stopRule: ["尾羽原", "安越", "高徳", "紀田", "千鳥", "金田", "金田新都心"], bg: "#800080", color: "#ffd700" },
+                "特急（スーパーつばき）": { stopRule: ["尾羽原", "高徳", "千鳥", "金田", "金田新都心"], bg: "#800080", color: "#ffd700" },
+                "特急（あさかぜ）": { stopRule: ["尾羽原", "安越", "参田町", "本郷", "千鳥"], bg: "#800080", color: "#ffd700" },
+                "特急（いとい）": { stopRule: ["安越", "本郷", "千鳥", "高徳", "高徳空港"], bg: "#800080", color: "#ffd700" },
+                "特急（ほしみ）": { stopRule: ["尾羽原", "井口", "飛岡", "飛水竜田", "飛水柏原", "金田新都心"], bg: "#800080", color: "#ffd700" },
+                "特急（はね）": { stopRule: ["尾羽原", "北尾羽", "百鳥", "南箱倉", "金田空港", "金田新都心"], bg: "#800080", color: "#ffd700" },
+                "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
+            }
+        },
+        fictional_b: {
+            name: "？？？ (B線)",
+            lines: {
+                main: ["三田", "横河", "荒川", "長町", "立町", "長塚", "松山", "陸前今庄", "阿栗吉山", "名取", "南流山", "岩富", "山栄"],
+                branch: ["名取", "岩見大山", "釜浜", "羽沢"]
+            },
+            trainTypeSettings: {
+                "各駅停車": { stopRule: "ALL", bg: "#4A90E2", color: "#ffffff" },
+                "快速": { stopRule: ["三田", "横河", "荒川", "長町", "陸前今庄", "名取", "山栄"], bg: "#FF0000", color: "#ffffff" },
+                "鴨原特急": { stopRule: ["三田", "長町", "陸前今庄", "阿栗吉山", "山栄"], bg: "#993399", color: "#ffffff" },
+                "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
+            }
+        },
+        fictional_c: {
+            name: "？？？ (C線)",
+            lines: {
+                express_line: ["C始発", "C要衝", "C都市", "C快速", "C終点"]
+            },
+            trainTypeSettings: {
+                "各駅停車": { stopRule: "ALL", bg: "#2e8b57", color: "#ffffff" },
+                "特急": { stopRule: ["C始発", "C都市", "C終点"], bg: "#4b0082", color: "#00ffff" },
+                "臨時": { stopRule: [], bg: "#ff1493", color: "#ffffff" },
+                "回送": { stopRule: [], bg: "#000000", color: "#ffffff" },
+                "試運転": { stopRule: [], bg: "#000000", color: "#ffffff" }
+            }
+        }
     };
 
-    const trainTypeSettings = {
-        "各駅停車": "ALL",
-        "準急": [
-            "尾羽原", "井口", "雲中", "安越", "千峰", "雲谷", "長峰", 
-            "高徳", "舞子台", "紀田", "千鳥", "問屋町", "赤堀", "金田", 
-            "百鳥", "支線尾羽", "北尾羽"
-        ],
-        "快速": [
-            "尾羽原", "井口", "雲中", "安越",
-            "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥",
-            "高徳整備場北", "高徳空港",
-            "水橋", "飛岡", "飛水竜田", "南竜田", "新塚", "飛水柏原", "上金田", "金田新都心",
-            "参田町", "本郷", "問屋町"
-        ],
-        "急行": [
-            "尾羽原", "井口", "安越", "雲谷", "高徳", "高徳", "紀田", "千鳥", 
-            "金田", "百鳥", "支線尾羽", "北尾羽", "金田空港", "金田新都心",
-            "本郷",
-        ],
-        "区間急行": [
-            "尾羽原", "井口", "安越", "雲谷", "高徳", 
-            "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥",
-            "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"
-        ],
-        "空港急行": [
-            "尾羽原", "安越", "高徳", "高徳空港"
-        ],
-        "快速急行": [
-            "尾羽原", "高徳", "高徳", "紀田", "千鳥", "金田", "百鳥", "北尾羽", "金田市", "金田新都心"
-        ],
-        "特急（やまかぜ）": [
-            "尾羽原", "安越", "高徳", "紀田", "千鳥", "百鳥", "北尾羽"
-        ],
-        "特急（AIR特急）": [
-            "尾羽原", "高徳", "千鳥", "金田", "金田空港", "金田新都心", "高徳空港"
-        ],
-        "特急（つばき）": [
-            "尾羽原", "安越", "高徳", "紀田", "千鳥", "金田", "金田新都心"
-        ],
-        "特急（スーパーつばき）": [
-            "尾羽原", "高徳", "千鳥", "金田", "金田新都心"
-        ],
-        "特急（あさかぜ）": [
-            "尾羽原", "安越", "参田町", "本郷", "千鳥"
-        ],
-        "特急（いとい）": [
-            "安越", "本郷", "千鳥", "高徳", "高徳空港"
-        ],
-        "特急（ほしみ）": [
-            "尾羽原", "井口", "飛岡", "飛水竜田", "飛水柏原", "金田新都心"
-        ],
-        "特急（はね）": [
-            "尾羽原", "北尾羽", "百鳥", "南箱倉", "金田空港", "金田新都心"
-        ],
-        "臨時": [],
-        "回送": [],
-        "試運転": []
-    };
+    let currentNetworkKey = "robutsu";
+    let lines = railwayNetworks[currentNetworkKey].lines;
+    let trainTypeSettings = railwayNetworks[currentNetworkKey].trainTypeSettings;
 
-    const allUniqueStations = Array.from(new Set([
-        ...lines.main, ...lines.rapid_line, ...lines.oba_branch, ...lines.airport, 
-        ...lines.link, ...lines.chidori_branch, ...lines.itoi, ...lines.tobigane, ...lines.kanada,
-        ...lines.hakokura_link,
-        "南千鳥-信号場"
-    ]));
+    let allUniqueStations = [];
+
+    function updateAllUniqueStations() {
+        let setArr = [];
+        for (let key in lines) {
+            setArr.push(...lines[key]);
+        }
+        allUniqueStations = Array.from(new Set(setArr));
+    }
+    updateAllUniqueStations();
+
+    function updateTrainTypeSelects() {
+        const selects = [
+            document.getElementById('train-type-select'),
+            document.getElementById('re-train-type')
+        ];
+
+        selects.forEach(sel => {
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = '';
+            for (let tType in trainTypeSettings) {
+                sel.add(new Option(tType, tType));
+            }
+            if (trainTypeSettings[currentVal]) {
+                sel.value = currentVal;
+            }
+        });
+    }
 
     let stationOverrides = {};
     let currentStationList = [];
@@ -739,7 +721,18 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // NGワード設定の同期リスナー
+    function changeRailwayNetwork() {
+        const selectEl = document.getElementById('railway-network-select');
+        currentNetworkKey = selectEl.value;
+        lines = railwayNetworks[currentNetworkKey].lines;
+        trainTypeSettings = railwayNetworks[currentNetworkKey].trainTypeSettings;
+        updateAllUniqueStations();
+        updateTrainTypeSelects();
+        initStations();
+    }
+    
+    updateTrainTypeSelects();
+
     db.ref('settings/ngWords').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -762,20 +755,13 @@
         });
     }
 
-    // 防護発報の監視リスナー（音声再生なし）
-    db.ref('alert').on('child_added', (snapshot) => {
-        handleAlertData(snapshot.key, snapshot.val());
-    });
-    db.ref('alert').on('child_changed', (snapshot) => {
-        handleAlertData(snapshot.key, snapshot.val());
-    });
+    db.ref('alert').on('child_added', (snapshot) => { handleAlertData(snapshot.key, snapshot.val()); });
+    db.ref('alert').on('child_changed', (snapshot) => { handleAlertData(snapshot.key, snapshot.val()); });
 
     function handleAlertData(key, data) {
         if (!data) return;
-        // 音声再生処理を削除しました
     }
 
-    // 通信リスナーの設定
     db.ref('comms').on('value', (snapshot) => {
         const logEl = document.getElementById('comms-log');
         if (!logEl) return;
@@ -810,7 +796,6 @@
 
         if (data && key !== lastCommsKey) {
             lastCommsKey = key;
-            // メッセージ送信時（受信時）の音声再生処理を削除しました
         }
     });
 
@@ -983,8 +968,6 @@
 
     function endDuty() {
         if (confirm("乗務終了処理を行いますか？")) {
-            // 乗務終了時の音声停止処理を削除しました
-
             if (currentTrainNum) {
                 db.ref('online/' + currentTrainNum).remove();
                 db.ref('operations/' + currentTrainNum).remove();
@@ -1064,13 +1047,6 @@
             }
         }
 
-        if ((fromSt === "千鳥" && toSt === "南千鳥-信号場") || (fromSt === "南千鳥-信号場" && toSt === "千鳥")) {
-            return [fromSt, toSt];
-        }
-        if ((fromSt === "南千鳥-信号場" && toSt === "南千鳥") || (fromSt === "南千鳥" && toSt === "南千鳥-信号場")) {
-            return [fromSt, toSt];
-        }
-
         let graph = {};
         function addEdge(u, v) {
             if (!graph[u]) graph[u] = [];
@@ -1084,8 +1060,6 @@
                 addEdge(arr[i], arr[i+1]);
             }
         }
-        addEdge("千鳥", "南千鳥-信号場");
-        addEdge("南千鳥-信号場", "南千鳥");
 
         let queue = [[fromSt]];
         let visited = new Set([fromSt]);
@@ -1123,27 +1097,22 @@
         return fullRoute.filter((st, idx, arr) => idx === 0 || st !== arr[idx - 1]);
     }
 
+    // 路線ごとに定義された種別のカラー（背景・文字）を動的に適用する関数
     function applyTrainTypeClass(trainType) {
         const banner = document.getElementById('staf-type-banner');
         if (!banner) return;
-        banner.className = "nankai-type-banner";
         
-        if (trainType === "各駅停車") {
-            banner.classList.add('type-local');
-        } else if (trainType === "準急") {
-            banner.classList.add('type-semi');
-        } else if (trainType === "快速" || trainType === "区間急行") {
-            banner.classList.add('type-rapid');
-        } else if (trainType === "急行") {
-            banner.classList.add('type-express');
-        } else if (trainType === "空港急行") {
-            banner.classList.add('type-airport');
-        } else if (trainType === "快速急行") {
-            banner.classList.add('type-rapid-express');
-        } else if (trainType.includes("特急")) {
-            banner.classList.add('type-limited-express');
+        // インラインスタイルをリセット
+        banner.style.backgroundColor = "";
+        banner.style.color = "";
+        
+        const typeConfig = trainTypeSettings[trainType];
+        if (typeConfig) {
+            banner.style.backgroundColor = typeConfig.bg;
+            banner.style.color = typeConfig.color;
         } else {
-            banner.classList.add('type-default');
+            banner.style.backgroundColor = "#0073eb";
+            banner.style.color = "#fff";
         }
     }
 
@@ -1165,26 +1134,17 @@
 
         currentStationList = [];
         const stationList = getRouteStations(startSt, endSt, vias);
-        const stopRule = trainTypeSettings[trainType];
+        const typeConfig = trainTypeSettings[trainType];
+        const stopRule = typeConfig ? typeConfig.stopRule : "ALL";
         
         stationList.forEach((stName, index) => {
             let action = '停車';
             let isPass = false;
 
             if (index !== 0 && index !== stationList.length - 1) {
-                if (stopRule !== "ALL") {
-                    if (Array.isArray(stopRule)) {
-                        let isOutsideOperationArea = false;
-                        if (trainType === "快速") {
-                            const rapidLineStations = ["問屋町", "新赤堀", "赤堀", "塚野", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"];
-                            if (rapidLineStations.includes(stName)) {
-                                isOutsideOperationArea = true;
-                            }
-                        }
-
-                        if (!isOutsideOperationArea && !stopRule.includes(stName)) {
-                            isPass = true;
-                        }
+                if (stopRule && stopRule !== "ALL" && Array.isArray(stopRule)) {
+                    if (!stopRule.includes(stName)) {
+                        isPass = true;
                     }
                 }
             }
@@ -1390,7 +1350,7 @@
 
             db.ref('operations/' + myTrain).once('value', (snapshot) => {
                 const opData = snapshot.val();
-                let trainType = "各駅停車";
+                let trainType = Object.keys(trainTypeSettings)[0];
                 let carCount = "4両";
                 let startSt = allUniqueStations[0];
                 let endSt = allUniqueStations[1];
@@ -1442,6 +1402,7 @@
                     document.getElementById('re-via3').value = vias[2];
                     document.getElementById('driver-reselect-area').classList.remove('hidden');
                 } else {
+                    document.getElementById('driver-restyle-area')?.classList.add('hidden');
                     document.getElementById('driver-reselect-area').classList.add('hidden');
                 }
 
