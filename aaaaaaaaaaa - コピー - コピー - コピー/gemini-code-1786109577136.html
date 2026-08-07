@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ロブ鉄運行補助ツール</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: sans-serif; background: #0055A4; color: #FFD700; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; }
+        #app { width: 90%; max-width: 650px; padding: 15px; border: 2px solid #FFD700; border-radius: 10px; background: #004488; box-sizing: border-box; position: relative; }
+        input, select, button { width: 100%; margin: 6px 0; padding: 8px; font-size: 14px; box-sizing: border-box; }
+        .hidden { display: none !important; }
+        
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000000; color: #FFD700; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10000;
+            transition: opacity 0.8s ease;
+        }
+
+        @keyframes fadeInText {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInBox {
+            0% { opacity: 0; border-color: transparent; background: #000; }
+            100% { opacity: 1; border-color: #000; background: #fff; }
+        }
+
+        .boot-title {
+            font-size: 2.2em; margin-bottom: 10px; text-align: center;
+            opacity: 0;
+            animation: fadeInText 1s ease 0.3s forwards;
+        }
+        .boot-sub {
+            font-size: 1.1em; color: #ccc;
+            opacity: 0;
+            animation: fadeInText 1s ease 0.8s forwards;
+        }
+        .boot-btn {
+            width: 200px; margin-top: 30px; background: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;
+            opacity: 0;
+            animation: fadeInText 1s ease 1.3s forwards;
+        }
+
+        #staf-area {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #staf-area.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #staf-container {
+            margin-top: 5px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #000;
+            padding: 6px;
+            border-radius: 5px;
+            text-align: left;
+            opacity: 0;
+            animation: fadeInBox 0.8s ease 0.2s forwards;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .nankai-header-box {
+            border: 2px solid #000;
+            display: flex;
+            height: 65px;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+        }
+        .nankai-notice {
+            flex: 1;
+            border-right: 2px solid #000;
+            padding: 4px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #fff;
+            color: #000;
+        }
+        .nankai-train-info-area {
+            width: 180px;
+            display: flex;
+            flex-direction: column;
+        }
+        .nankai-type-banner {
+            font-size: 1.1em;
+            font-weight: bold;
+            text-align: center;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-bottom: 2px solid #000;
+        }
+        .nankai-train-sub {
+            display: flex;
+            height: 27px;
+            background: #fff;
+        }
+        .nankai-train-num {
+            flex: 1;
+            border-right: 2px solid #000;
+            display: flex;
+            align-items: center;
+            padding-left: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #000;
+        }
+        .nankai-car-count {
+            width: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #000;
+        }
+        .nankai-direction {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 9px;
+            color: inherit;
+            opacity: 0.8;
+        }
+
+        .type-local { background: #0000ff; color: #fff; }
+        .type-semi { background: #9acd32; color: #000; }
+        .type-rapid { background: #00bfff; color: #000; }
+        .type-express { background: #ff0000; color: #fff; }
+        .type-airport { background: #000000; color: #ff8c00; }
+        .type-rapid-express { background: #ff8c00; color: #fff; }
+        .type-limited-express { background: #800080; color: #ffd700; }
+        .type-default { background: #0073eb; color: #fff; }
+
+        .nankai-staf-body-container {
+            border: 2px solid #000;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            height: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .staf-page-content {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out;
+        }
+        .staf-page-content.fade-out {
+            opacity: 0;
+            transform: scale(0.98);
+        }
+        .staf-page-content.fade-in {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .nankai-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .nankai-column:first-child {
+            border-right: 2px solid #000;
+        }
+        .nankai-row {
+            flex: 1;
+            display: flex;
+            border-bottom: 1px solid #000;
+            font-size: 11px;
+            min-height: 0;
+            cursor: pointer;
+        }
+        .nankai-row:hover { background: #f0f8ff; }
+        .nankai-row:last-child {
+            border-bottom: none;
+        }
+        
+        .cell-station { width: 34%; border-right: 1px solid #000; display: flex; align-items: center; padding-left: 4px; font-weight: bold; white-space: nowrap; overflow: hidden; color: #000; }
+        .cell-code { width: 16%; border-right: 1px solid #000; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #000; }
+        .cell-action { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; }
+
+        .bg-red { background: #0073eb !important; color: #fff !important; }
+        .pass-row { color: #888; background: #f9f9f9; }
+        .extra-stop { color: #d9534f !important; background: #fff3cd !important; }
+        .extra-pass { color: #0275d8 !important; background: #e2e3e5 !important; }
+        .current-station-row { background: #ffffcc !important; border-left: 4px solid #ffcc00; }
+
+        .nankai-footer-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-shrink: 0;
+            height: 35px;
+        }
+        .nankai-footer-buttons button {
+            flex: 1;
+            height: 100%;
+            margin: 0;
+            background: #eee;
+            border: 2px solid #000;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            color: #000;
+        }
+        .nankai-footer-buttons button:active { background: #ccc; }
+
+        .sub-panel {
+            background: #112233; padding: 5px 10px; border-radius: 4px; font-size: 11px; color: #ccc; display: flex; justify-content: space-between; align-items: center; margin-top: 4px;
+        }
+        .end-btn { background: #333; color: #fff; border: 1px solid #555; font-size: 10px; padding: 4px 8px; cursor: pointer; border-radius: 3px; width: auto; margin: 0; }
+
+        /* --- 懐中時計風ウィジェットのデザイン --- */
+        .pocket-watch-widget {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #0a141e;
+            padding: 3px 8px;
+            border-radius: 20px;
+            border: 1px solid #d4af37;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .pocket-watch-widget:hover {
+            background: #192c3f;
+        }
+        .mini-dial {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #d4af37;
+            border-radius: 50%;
+            position: relative;
+            background: #fdfdfd;
+        }
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            background: #000;
+        }
+        .hour-hand { width: 2px; height: 5px; background: #222; transform: translateX(-50%); }
+        .min-hand { width: 1.5px; height: 7px; background: #333; transform: translateX(-50%); }
+        .sec-hand { width: 1px; height: 9px; background: #c00; transform: translateX(-50%); }
+        .clock-text-digital {
+            font-family: monospace;
+            font-size: 12px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        /* --- 懐中時計ポップアップ拡大画面 --- */
+        #watch-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none;
+            justify-content: center; align-items: center; z-index: 20000;
+            flex-direction: column;
+        }
+        .big-watch-case {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, #e6d59c 0%, #b8972e 70%, #7a6113 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.6);
+            position: relative;
+            border: 4px solid #5a470c;
+        }
+        .big-watch-crown {
+            position: absolute;
+            top: -16px;
+            width: 30px;
+            height: 18px;
+            background: #b8972e;
+            border: 2px solid #5a470c;
+            border-radius: 4px;
+        }
+        .big-dial {
+            width: 240px;
+            height: 240px;
+            background: #f9f6ee;
+            border-radius: 50%;
+            border: 3px solid #333;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+        .big-dial-number {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            font-family: serif;
+            font-weight: bold;
+            font-size: 15px;
+            color: #111;
+            padding: 5px;
+        }
+        .big-hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+        }
+        .big-hour { width: 4px; height: 60px; background: #111; border-radius: 2px; transform: translateX(-50%); }
+        .big-min { width: 3px; height: 85px; background: #222; border-radius: 1.5px; transform: translateX(-50%); }
+        .big-sec { width: 1.5px; height: 95px; background: #d00; transform: translateX(-50%); }
+        .big-center-pin {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            background: #b8972e;
+            border: 1px solid #333;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .watch-close-btn {
+            margin-top: 25px;
+            background: #FFD700;
+            color: #000;
+            border: none;
+            padding: 8px 25px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .role-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+        .role-tab { flex: 1; padding: 8px; background: #003366; color: #aaa; border: 1px solid #555; text-align: center; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 13px; }
+        .role-tab.active { background: #0073eb; color: #fff; border-color: #FFD700; }
+        
+        .train-select-row { display: flex; gap: 4px; }
+        
+        /* 指令・乗務員通話パネル用スタイル */
+        .comms-panel {
+            background: #0a141e;
+            border: 1px solid #FFD700;
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        .comms-log {
+            background: #000;
+            color: #00ff00;
+            font-family: monospace;
+            height: 60px;
+            overflow-y: auto;
+            padding: 4px;
+            border: 1px solid #333;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .ng-config-box {
+            background: #15293d;
+            border: 1px dashed #d4af37;
+            padding: 6px;
+            margin-top: 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 懐中時計拡大ポップアップモーダル -->
+<div id="watch-modal" onclick="closeWatchModal()">
+    <div class="big-watch-case" onclick="event.stopPropagation()">
+        <div class="big-watch-crown"></div>
+        <div class="big-dial">
+            <div class="big-dial-number" style="transform: rotate(30deg)"><span style="display:inline-block;transform:rotate(-30deg)">1</span></div>
+            <div class="big-dial-number" style="transform: rotate(60deg)"><span style="display:inline-block;transform:rotate(-60deg)">2</span></div>
+            <div class="big-dial-number" style="transform: rotate(90deg)"><span style="display:inline-block;transform:rotate(-90deg)">3</span></div>
+            <div class="big-dial-number" style="transform: rotate(120deg)"><span style="display:inline-block;transform:rotate(-120deg)">4</span></div>
+            <div class="big-dial-number" style="transform: rotate(150deg)"><span style="display:inline-block;transform:rotate(-150deg)">5</span></div>
+            <div class="big-dial-number" style="transform: rotate(180deg)"><span style="display:inline-block;transform:rotate(-180deg)">6</span></div>
+            <div class="big-dial-number" style="transform: rotate(210deg)"><span style="display:inline-block;transform:rotate(-210deg)">7</span></div>
+            <div class="big-dial-number" style="transform: rotate(240deg)"><span style="display:inline-block;transform:rotate(-240deg)">8</span></div>
+            <div class="big-dial-number" style="transform: rotate(270deg)"><span style="display:inline-block;transform:rotate(-270deg)">9</span></div>
+            <div class="big-dial-number" style="transform: rotate(300deg)"><span style="display:inline-block;transform:rotate(-300deg)">10</span></div>
+            <div class="big-dial-number" style="transform: rotate(330deg)"><span style="display:inline-block;transform:rotate(-330deg)">11</span></div>
+            <div class="big-dial-number" style="transform: rotate(360deg)"><span style="display:inline-block;transform:rotate(-360deg)">12</span></div>
+            
+            <div id="big-hour-hand" class="big-hand big-hour"></div>
+            <div id="big-min-hand" class="big-hand big-min"></div>
+            <div id="big-sec-hand" class="big-hand big-sec"></div>
+            <div class="big-center-pin"></div>
+        </div>
+    </div>
+    <div style="color: #fff; margin-top: 15px; font-family: monospace; font-size: 1.3em;" id="modal-digital-clock">19:59:00</div>
+    <button class="watch-close-btn" onclick="closeWatchModal()">閉じる</button>
+</div>
+
+<div id="boot-screen">
+    <h1 class="boot-title">ROB-DESTECH SYSTEM</h1>
+    <p class="boot-sub">Operation Tool</p>
+    <button class="boot-btn" onclick="startApp()">システム起動</button>
+</div>
+
+<div id="app">
+    <h1 style="font-size: 1.4em; margin: 5px 0;">運行補助ツール（全種別対応）</h1>
+    <div id="login-zone">
+        <div class="role-tabs">
+            <div id="tab-driver" class="role-tab active" onclick="switchRoleTab('driver')">運転士モード</div>
+            <div id="tab-conductor" class="role-tab" onclick="switchRoleTab('conductor')">車掌モード</div>
+            <div id="tab-shirei" class="role-tab" onclick="switchRoleTab('shirei')">指令室</div>
+        </div>
+        <input type="hidden" id="role-select" value="driver">
+
+        <div id="train-input-container">
+            <label style="font-size:0.8em; text-align:left; display:block;">担当列車番号 (自由入力可能):</label>
+            <div class="train-select-row">
+                <input id="my-train" placeholder="例: 1001レ または 臨時01 など" style="flex: 2; margin: 2px 0;">
+            </div>
+        </div>
+
+        <div id="driver-setting">
+            <div style="display: flex; gap: 4px;">
+                <select id="train-type-select" style="flex: 2; margin: 2px 0;">
+                    <option value="各駅停車">各駅停車</option>
+                    <option value="準急">準急</option>
+                    <option value="快速">快速</option>
+                    <option value="急行">急行</option>
+                    <option value="区間急行">区間急行</option>
+                    <option value="空港急行">空港急行</option>
+                    <option value="快速急行">快速急行</option>
+                    <option value="特急（やまかぜ）">特急（やまかぜ）</option>
+                    <option value="特急（AIR特急）">特急（AIR特急）</option>
+                    <option value="特急（つばき）">特急（つばき）</option>
+                    <option value="特急（スーパーつばき）">特急（スーパーつばき）</option>
+                    <option value="特急（あさかぜ）">特急（あさかぜ）</option>
+                    <option value="特急（いとい）">特急（いとい）</option>
+                    <option value="特急（ほしみ）">特急（ほしみ）</option>
+                    <option value="特急（はね）">特急（はね）</option>
+                    <option value="臨時">臨時</option>
+                    <option value="回送">回送</option>
+                    <option value="試運転">試運転</option>
+                </select>
+                <select id="car-count-select" style="flex: 1; margin: 2px 0;">
+                    <option value="2両">2両</option>
+                    <option value="3両">3両</option>
+                    <option value="4両" selected>4両</option>
+                    <option value="5両">5両</option>
+                    <option value="6両">6両</option>
+                    <option value="7両">7両</option>
+                    <option value="8両">8両</option>
+                    <option value="10両">10両</option>
+                    <option value="12両">12両</option>
+                </select>
+            </div>
+
+            <label style="font-size:0.8em; text-align:left; display:block;">行路・系統 (〇〇経由など):</label>
+            <input id="train-route-variant" placeholder="例: 百鳥経由 など (省略可)">
+
+            <label style="font-size:0.8em; text-align:left; display:block; margin-top:4px;">経由ルート指定（先に通る駅）:</label>
+            <select id="via1-station"><option value="">-- 経由1 (任意) --</option></select>
+            <select id="via2-station"><option value="">-- 経由2 (任意) --</option></select>
+            <select id="via3-station"><option value="">-- 経由3 (任意) --</option></select>
+
+            <label style="font-size:0.8em; text-align:left; display:block; margin-top:4px;">始発駅 / 終着駅:</label>
+            <div style="display: flex; gap: 4px;">
+                <select id="start-station-select" style="margin:2px 0;"></select>
+                <select id="end-station-select" style="margin:2px 0;"></select>
+            </div>
+        </div>
+
+        <div id="shirei-setting" class="hidden">
+            <input type="password" id="password" placeholder="指令パスワード">
+        </div>
+
+        <button onclick="login()" style="background: #FFD700; color: #000; font-weight: bold; margin-top: 10px;">システムへ入る</button>
+    </div>
+
+    <div id="main-zone" class="hidden">
+        <!-- 指令ツールエリア（指令室用） -->
+        <div id="shirei-tools" class="hidden">
+            <input id="target-train-input" placeholder="対象列車">
+            <button onclick="sendAlert('SPECIFIC')">特定列車防護</button>
+            <button onclick="sendAlert('ALL')">全列車緊急防護</button>
+            <select id="active-trains-select"></select>
+            <button onclick="removeSpecificAlert()">選択列車の個別解除</button>
+            <button onclick="resetAlert()" style="background: #f00; color: #fff;">全解除</button>
+        </div>
+
+        <!-- 運転士・車掌用防護発報・解除エリア -->
+        <div id="driver-alert-tools" class="hidden" style="background: #0a141e; border: 1px solid #FFD700; padding: 8px; border-radius: 5px; margin-bottom: 6px; font-size: 12px;">
+            <div style="font-weight: bold; margin-bottom: 4px;">🚨 防護無線操作</div>
+            <div style="display: flex; gap: 4px; margin-bottom: 4px;">
+                <button onclick="sendAlert('ALL')" style="background: #d9534f; color: #fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">緊急防護発報 (全列車)</button>
+            </div>
+            <div style="display: flex; gap: 4px;">
+                <button onclick="driverClearAlert()" style="background: #555; color: #fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">自列車の防護解除</button>
+            </div>
+        </div>
+
+        <!-- 運転士・車掌・指令共通の通信（メッセージ送信）パネル -->
+        <div class="comms-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <div style="font-weight: bold;">📞 指令通話・メッセージシステム</div>
+                <button onclick="resetCommsHistory()" style="background: #d9534f; color: #fff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer; width: auto; margin: 0;">交信履歴リセット</button>
+            </div>
+            <div id="comms-log" class="comms-log">通信ログ待機中...</div>
+            
+            <!-- 全列車から自由にメッセージを送れる共通送信コントロール -->
+            <div style="display: flex; gap: 4px; margin-top: 4px;">
+                <select id="msg-target-select" style="flex: 1; margin:0; font-size:11px;">
+                    <option value="指令室">指令室へ送信</option>
+                    <option value="ALL">全列車・指令へ一斉送信</option>
+                </select>
+                <input id="general-custom-msg" placeholder="送信するメッセージを入力..." style="flex: 2; margin:0; padding:4px; font-size:11px;">
+                <button onclick="sendCustomMessage()" style="background:#0073eb; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:auto; padding:4px 8px;">送信</button>
+            </div>
+
+            <!-- NGワード設定パネル（運転士・車掌・指令から設定可能） -->
+            <div class="ng-config-box">
+                <div style="font-weight: bold; margin-bottom: 2px; color: #FFD700;">⚙️ NGワード設定（カンマ区切りで入力）</div>
+                <div style="display: flex; gap: 4px;">
+                    <input id="ng-words-input" placeholder="例: ばか, あほ, 暴言" style="margin:0; padding:4px; font-size:11px; background:#0b1929; color:#fff; border:1px solid #444;">
+                    <button onclick="saveNgWords()" style="background:#d9534f; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:auto; padding:4px 8px; font-size:11px;">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <p style="margin: 5px 0; font-size: 0.9em;">担当: <span id="my-train-display"></span> (<span id="my-role-display"></span>)</p>
+
+        <div id="driver-reselect-area" class="hidden" style="background: #003366; padding: 8px; border-radius: 5px; margin-bottom: 5px; border: 1px solid #FFD700;">
+            <p style="margin: 0 0 4px 0; font-size: 0.85em; font-weight: bold;">ダイヤ・行路の変更</p>
+            <div style="display: flex; gap: 4px;">
+                <select id="re-train-type" style="flex: 2; margin: 2px 0;">
+                    <option value="各駅停車">各駅停車</option>
+                    <option value="準急">準急</option>
+                    <option value="快速">快速</option>
+                    <option value="急行">急行</option>
+                    <option value="区間急行">区間急行</option>
+                    <option value="空港急行">空港急行</option>
+                    <option value="快速急行">快速急行</option>
+                    <option value="特急（やまかぜ）">特急（やまかぜ）</option>
+                    <option value="特急（AIR特急）">特急（AIR特急）</option>
+                    <option value="特急（つばき）">特急（つばき）</option>
+                    <option value="特急（スーパーつばき）">特急（スーパーつばき）</option>
+                    <option value="特急（あさかぜ）">特急（あさかぜ）</option>
+                    <option value="特急（いとい）">特急（いとい）</option>
+                    <option value="特急（ほしみ）">特急（ほしみ）</option>
+                    <option value="特急（はね）">特急（はね）</option>
+                    <option value="臨時">臨時</option>
+                    <option value="回送">回送</option>
+                    <option value="試運転">試運転</option>
+                </select>
+                <select id="re-car-count" style="flex: 1; margin: 2px 0;">
+                    <option value="2両">2両</option>
+                    <option value="3両">3両</option>
+                    <option value="4両" selected>4両</option>
+                    <option value="5両">5両</option>
+                    <option value="6両">6両</option>
+                    <option value="7両">7両</option>
+                    <option value="8両">8両</option>
+                    <option value="10両">10両</option>
+                    <option value="12両">12両</option>
+                </select>
+            </div>
+            <input id="re-train-route-variant" placeholder="例: 百鳥経由 など" style="margin:2px 0;">
+            
+            <div style="font-size:0.75em; margin:2px 0; text-align:left;">経由ルート指定（先に通る駅）:</div>
+            <div style="display: flex; gap: 4px;">
+                <select id="re-via1" style="margin:2px 0;"><option value="">-- 経由1 --</option></select>
+                <select id="re-via2" style="margin:2px 0;"><option value="">-- 経由2 --</option></select>
+                <select id="re-via3" style="margin:2px 0;"><option value="">-- 経由3 --</option></select>
+            </div>
+
+            <div style="display: flex; gap: 4px; margin-top: 2px;">
+                <select id="re-start-station" style="margin:2px 0;"></select>
+                <select id="re-end-station" style="margin:2px 0;"></select>
+            </div>
+            <button onclick="updateStafFromUI()" style="background: #FFD700; color: #000; font-weight: bold; margin: 4px 0; padding: 6px;">新しいダイヤでスタフを更新</button>
+        </div>
+
+        <div id="staf-area" class="hidden">
+            <div id="staf-container">
+                <div class="nankai-header-box">
+                    <div class="nankai-notice">
+                        <div>列車運行管理システム</div>
+                        <div>定時運行を遵守</div>
+                    </div>
+                    <div class="nankai-train-info-area">
+                        <div id="staf-type-banner" class="nankai-type-banner type-default">
+                            <span class="nankai-direction">下り</span>
+                            <span id="staf-train-type-text">各駅停車</span>
+                        </div>
+                        <div class="nankai-train-sub">
+                            <div class="nankai-train-num" id="staf-train-num-text">第----レ</div>
+                            <div class="nankai-car-count" id="staf-car-count-text">--car</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nankai-staf-body-container">
+                    <div id="staf-page-wrapper" class="staf-page-content">
+                    </div>
+                </div>
+
+                <div class="nankai-footer-buttons">
+                    <button onclick="changePage(-1)">戻る</button>
+                    <button onclick="changePage(1)">進む</button>
+                </div>
+
+                <div class="sub-panel">
+                    <span id="battery-status" style="font-size: 10px; color: #88ff88;">電池: 84%</span>
+                    
+                    <div class="pocket-watch-widget" onclick="openWatchModal()" title="クリックで懐中時計を拡大">
+                        <div class="mini-dial">
+                            <div id="mini-hour-hand" class="hand hour-hand"></div>
+                            <div id="mini-min-hand" class="hand min-hand"></div>
+                            <div id="mini-sec-hand" class="hand sec-hand"></div>
+                        </div>
+                        <span id="clock" class="clock-text-digital">19:59</span>
+                    </div>
+
+                    <button class="end-btn" onclick="endDuty()">乗務終了</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<audio id="alert-sound" src="alert.m4a"></audio>
+<audio id="alert-clear-sound" src="alert_clear.m4a"></audio>
+<audio id="call-sound" src="call.mp3"></audio>
+
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+
+<script>
+    const lines = {
+        main: ["尾羽原", "井口", "梅郷", "雲中", "安越", "十川真砂橋", "千峰", "南雲谷", "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥"],
+        rapid_line: ["千鳥", "問屋町", "問屋蔵前", "赤堀大沢", "赤堀", "新赤堀", "塚野", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"],
+        oba_branch: ["北尾羽", "尾羽原"],
+        airport: ["高徳", "新高徳", "高徳整備場北", "高徳空港"],
+        link: ["南千鳥", "問屋町"],
+        chidori_branch: ["千鳥", "南千鳥", "奥千鳥", "千鳥山道", "本郷神宮前", "本郷"],
+        itoi: ["井口", "上井口", "参田町", "東本郷", "本郷", "西問屋町", "問屋町"],
+        tobigane: ["水橋", "飛岡", "垂岡", "飛水竜田", "南竜田", "大原", "新塚", "飛水柏原", "上金田", "金田新都心"],
+        kanada: ["金田", "鵲橋", "金田市", "金田空港", "金田新都心"],
+        hakokura_link: ["百鳥", "南箱倉", "新箱倉金田", "金田市"]
+    };
+
+    const trainTypeSettings = {
+        "各駅停車": "ALL",
+        "準急": [
+            "尾羽原", "井口", "雲中", "安越", "千峰", "雲谷", "長峰", 
+            "高徳", "舞子台", "紀田", "千鳥", "問屋町", "赤堀", "金田", 
+            "百鳥", "支線尾羽", "北尾羽"
+        ],
+        "快速": [
+            "尾羽原", "井口", "雲中", "安越",
+            "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥",
+            "高徳整備場北", "高徳空港",
+            "水橋", "飛岡", "飛水竜田", "南竜田", "新塚", "飛水柏原", "上金田", "金田新都心",
+            "参田町", "本郷", "問屋町"
+        ],
+        "急行": [
+            "尾羽原", "井口", "安越", "雲谷", "高徳", "高徳", "紀田", "千鳥", 
+            "金田", "百鳥", "支線尾羽", "北尾羽", "金田空港", "金田新都心",
+            "本郷",
+        ],
+        "区間急行": [
+            "尾羽原", "井口", "安越", "雲谷", "高徳", 
+            "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥",
+            "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"
+        ],
+        "空港急行": [
+            "尾羽原", "安越", "高徳", "高徳空港"
+        ],
+        "快速急行": [
+            "尾羽原", "高徳", "高徳", "紀田", "千鳥", "金田", "百鳥", "北尾羽", "金田市", "金田新都心"
+        ],
+        "特急（やまかぜ）": [
+            "尾羽原", "安越", "高徳", "紀田", "千鳥", "百鳥", "北尾羽"
+        ],
+        "特急（AIR特急）": [
+            "尾羽原", "高徳", "千鳥", "金田", "金田空港", "金田新都心", "高徳空港"
+        ],
+        "特急（つばき）": [
+            "尾羽原", "安越", "高徳", "紀田", "千鳥", "金田", "金田新都心"
+        ],
+        "特急（スーパーつばき）": [
+            "尾羽原", "高徳", "千鳥", "金田", "金田新都心"
+        ],
+        "特急（あさかぜ）": [
+            "尾羽原", "安越", "参田町", "本郷", "千鳥"
+        ],
+        "特急（いとい）": [
+            "安越", "本郷", "千鳥", "高徳", "高徳空港"
+        ],
+        "特急（ほしみ）": [
+            "尾羽原", "井口", "飛岡", "飛水竜田", "飛水柏原", "金田新都心"
+        ],
+        "特急（はね）": [
+            "尾羽原", "北尾羽", "百鳥", "南箱倉", "金田空港", "金田新都心"
+        ],
+        "臨時": [],
+        "回送": [],
+        "試運転": []
+    };
+
+    const allUniqueStations = Array.from(new Set([
+        ...lines.main, ...lines.rapid_line, ...lines.oba_branch, ...lines.airport, 
+        ...lines.link, ...lines.chidori_branch, ...lines.itoi, ...lines.tobigane, ...lines.kanada,
+        ...lines.hakokura_link,
+        "南千鳥-信号場"
+    ]));
+
+    let stationOverrides = {};
+    let currentStationList = [];
+    let currentPage = 0;
+    const ITEMS_PER_PAGE = 18;
+    let currentStationIndex = 0; 
+    let currentTrainNum = "";
+    let userRole = "";
+    let ngWordsList = []; // NGワード管理用配列
+
+    const firebaseConfig = { apiKey: "AIzaSyB3pG3qaYMFw1g-Y5iUIcLhDC6XwfvZsm0", databaseURL: "https://hozyo-5ff7a-default-rtdb.firebaseio.com", projectId: "hozyo-5ff7a" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // NGワード設定の同期リスナー
+    db.ref('settings/ngWords').on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+            ngWordsList = val.split(',').map(w => w.trim()).filter(w => w.length > 0);
+            const inputEl = document.getElementById('ng-words-input');
+            if (inputEl && document.activeElement !== inputEl) {
+                inputEl.value = val;
+            }
+        } else {
+            ngWordsList = ["うんこ", "うんち", ];
+        }
+    });
+
+    function saveNgWords() {
+        const val = document.getElementById('ng-words-input').value.trim();
+        db.ref('settings/ngWords').set(val).then(() => {
+            alert("NGワード設定を更新しました");
+        }).catch(e => {
+            alert("保存に失敗しました: " + e);
+        });
+    }
+
+    // 防護発報の監視リスナー
+    db.ref('alert').on('child_added', (snapshot) => {
+        handleAlertData(snapshot.key, snapshot.val());
+    });
+    db.ref('alert').on('child_changed', (snapshot) => {
+        handleAlertData(snapshot.key, snapshot.val());
+    });
+
+    function handleAlertData(key, data) {
+        if (!data) return;
+        const alertSound = document.getElementById('alert-sound');
+        const clearSound = document.getElementById('alert-clear-sound');
+
+        if (data.type === 'ALL') {
+            if (clearSound) { clearSound.pause(); clearSound.currentTime = 0; }
+            if (alertSound) { alertSound.currentTime = 0; alertSound.play().catch(e => console.log("音声再生エラー:", e)); }
+        } else if (data.type === 'SPECIFIC') {
+            if (userRole === 'shirei' || key === currentTrainNum) {
+                if (clearSound) { clearSound.pause(); clearSound.currentTime = 0; }
+                if (alertSound) { alertSound.currentTime = 0; alertSound.play().catch(e => console.log("音声再生エラー:", e)); }
+            }
+        } else if (data.type === 'CLEARED') {
+            if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
+            if (clearSound) { clearSound.currentTime = 0; clearSound.play().catch(e => console.log("音声再生エラー:", e)); }
+        }
+    }
+
+    // 通信リスナーの設定（メッセージ追加時に自分以外、あるいは新規メッセージ到着時のみ鳴るように判定）
+    db.ref('comms').on('value', (snapshot) => {
+        const logEl = document.getElementById('comms-log');
+        if (!logEl) return;
+        
+        if (!snapshot.exists()) {
+            logEl.innerHTML = '通信ログ待機中...';
+            return;
+        }
+
+        let logsHtml = '';
+        snapshot.forEach((childSnap) => {
+            const data = childSnap.val();
+            if (data) {
+                const timeStr = new Date(data.timestamp).toLocaleTimeString();
+                logsHtml += `[${timeStr}] ${data.sender}: ${data.message}<br>`;
+            }
+        });
+        logEl.innerHTML = logsHtml;
+        logEl.scrollTop = logEl.scrollHeight;
+    });
+
+    let lastCommsKey = null;
+    let isInitialCommsLoad = true;
+    db.ref('comms').on('child_added', (snapshot) => {
+        const data = snapshot.val();
+        const key = snapshot.key;
+        
+        if (isInitialCommsLoad) {
+            lastCommsKey = key;
+            return;
+        }
+
+        if (data && key !== lastCommsKey) {
+            lastCommsKey = key;
+            // 自分が送信したメッセージでない場合のみ呼び出し音を鳴らす（または単純に着信音を鳴らす）
+            const alertSound = document.getElementById('alert-sound');
+            if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
+
+            const callSound = document.getElementById('call-sound');
+            if (callSound) {
+                callSound.currentTime = 0;
+                callSound.play().catch(e => console.log("音声再生エラー:", e));
+            }
+        }
+    });
+
+    // 初回読み込み完了フラグを立てる
+    db.ref('comms').once('value', () => {
+        isInitialCommsLoad = false;
+    });
+
+    function resetCommsHistory() {
+        if (confirm("交信履歴をすべてリセットしますか？")) {
+            db.ref('comms').remove().then(() => {
+                const logEl = document.getElementById('comms-log');
+                if (logEl) logEl.innerHTML = '通信ログ待機中...';
+            }).catch(e => {
+                alert("履歴の削除に失敗しました: " + e);
+            });
+        }
+    }
+
+    db.ref('online').on('value', (s) => {
+        const shireiSelect = document.getElementById('active-trains-select');
+        const msgTargetSelect = document.getElementById('msg-target-select');
+        
+        if(shireiSelect) shireiSelect.innerHTML = '';
+        
+        let currentMsgTargetVal = msgTargetSelect ? msgTargetSelect.value : "指令室";
+        if(msgTargetSelect) {
+            msgTargetSelect.innerHTML = `
+                <option value="指令室">指令室へ送信</option>
+                <option value="ALL">全列車・指令へ一斉送信</option>
+            `;
+        }
+
+        s.forEach(c => {
+            let trainId = c.key;
+            if(shireiSelect) shireiSelect.add(new Option(trainId, trainId));
+            if(msgTargetSelect) {
+                msgTargetSelect.add(new Option(`${trainId} へ送信`, trainId));
+            }
+        });
+
+        if(msgTargetSelect) {
+            msgTargetSelect.value = currentMsgTargetVal;
+        }
+    });
+
+    function sendAlert(type) {
+        if (userRole === 'driver' || userRole === 'conductor') {
+            db.ref('alert/ALL').set({ type: 'ALL', timestamp: Date.now() });
+        } else {
+            const target = document.getElementById('target-train-input').value.trim();
+            if (type === 'ALL') {
+                db.ref('alert/ALL').set({ type: 'ALL', timestamp: Date.now() });
+            } else {
+                if (!target) {
+                    alert("対象列車を入力してください");
+                    return;
+                }
+                db.ref('alert/' + target).set({ type: 'SPECIFIC', timestamp: Date.now() });
+            }
+        }
+    }
+
+    function removeSpecificAlert() {
+        const select = document.getElementById('active-trains-select');
+        const target = select.value || document.getElementById('target-train-input').value.trim();
+        if (!target) {
+            alert("解除する列車を選択または入力してください");
+            return;
+        }
+        db.ref('alert/' + target).set({ type: 'CLEARED', timestamp: Date.now() });
+    }
+
+    function driverClearAlert() {
+        if (!currentTrainNum) return;
+        db.ref('alert/' + currentTrainNum).set({ type: 'CLEARED', timestamp: Date.now() });
+        db.ref('alert/ALL').set({ type: 'CLEARED', timestamp: Date.now() });
+    }
+
+    function resetAlert() {
+        db.ref('alert').set({
+            ALL: { type: 'CLEARED', timestamp: Date.now() }
+        });
+    }
+
+    // メッセージ送信機能（送信時の不要な音声再生を完全に排除）
+    function sendCustomMessage() {
+        const target = document.getElementById('msg-target-select').value;
+        const msgInput = document.getElementById('general-custom-msg');
+        let msg = msgInput.value.trim();
+
+        if (!msg) {
+            alert("メッセージを入力してください");
+            return;
+        }
+
+        // NGワードチェックおよびフィルタリング処理
+        for (let word of ngWordsList) {
+            if (word && msg.includes(word)) {
+                const regex = new RegExp(word, 'g');
+                msg = msg.replace(regex, '***');
+            }
+        }
+
+        let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
+        let displayTarget = target === 'ALL' ? '【全列車一斉】' : `【${target}】`;
+
+        db.ref('comms').push({
+            sender: `${senderName} -> ${displayTarget}`,
+            message: msg,
+            timestamp: Date.now()
+        });
+
+        msgInput.value = '';
+    }
+
+    function switchRoleTab(role) {
+        userRole = role;
+        document.getElementById('role-select').value = role;
+
+        document.getElementById('tab-driver').className = role === 'driver' ? 'role-tab active' : 'role-tab';
+        document.getElementById('tab-conductor').className = role === 'conductor' ? 'role-tab active' : 'role-tab';
+        document.getElementById('tab-shirei').className = role === 'shirei' ? 'role-tab active' : 'role-tab';
+
+        document.getElementById('train-input-container').style.display = role === 'shirei' ? 'none' : 'block';
+        document.getElementById('driver-setting').style.display = role === 'driver' ? 'block' : 'none';
+        document.getElementById('shirei-setting').style.display = role === 'shirei' ? 'none' : 'block';
+    }
+
+    setInterval(() => {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
+        const milliseconds = now.getMilliseconds();
+
+        const clockEl = document.getElementById('clock');
+        if (clockEl) {
+            clockEl.innerText = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+        }
+
+        const secDeg = (seconds + milliseconds / 1000) * 6;
+        const minDeg = (minutes + seconds / 60) * 6;
+        const hourDeg = ((hours % 12) + minutes / 60) * 30;
+
+        const miniSec = document.getElementById('mini-sec-hand');
+        const miniMin = document.getElementById('mini-min-hand');
+        const miniHour = document.getElementById('mini-hour-hand');
+        if(miniSec) miniSec.style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+        if(miniMin) miniMin.style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+        if(miniHour) miniHour.style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+
+        const bigSec = document.getElementById('big-sec-hand');
+        const bigMin = document.getElementById('big-min-hand');
+        const bigHour = document.getElementById('big-hour-hand');
+        const modalDigital = document.getElementById('modal-digital-clock');
+        if(bigSec) bigSec.style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+        if(bigMin) bigMin.style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+        if(bigHour) bigHour.style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+        if(modalDigital) {
+            modalDigital.innerText = String(hours).padStart(2, '0') + ':' + 
+                                     String(minutes).padStart(2, '0') + ':' + 
+                                     String(seconds).padStart(2, '0');
+        }
+    }, 50);
+
+    function openWatchModal() {
+        document.getElementById('watch-modal').style.display = 'flex';
+    }
+    function closeWatchModal() {
+        document.getElementById('watch-modal').style.display = 'none';
+    }
+
+    // 乗務終了ボタン：すべての音源を確実に完全停止してから終了処理を実行
+    function endDuty() {
+        if (confirm("乗務終了処理を行いますか？")) {
+            const alertSound = document.getElementById('alert-sound');
+            const clearSound = document.getElementById('alert-clear-sound');
+            const callSound = document.getElementById('call-sound');
+
+            // すべての音源を停止し、再生位置を初期化
+            [alertSound, clearSound, callSound].forEach(sound => {
+                if (sound) {
+                    sound.pause();
+                    sound.currentTime = 0;
+                }
+            });
+
+            if (currentTrainNum) {
+                db.ref('online/' + currentTrainNum).remove();
+                db.ref('operations/' + currentTrainNum).remove();
+            }
+            
+            setTimeout(() => {
+                location.reload();
+            }, 300);
+        }
+    }
+
+    function initStations() {
+        const selects = [
+            document.getElementById('start-station-select'),
+            document.getElementById('end-station-select'),
+            document.getElementById('re-start-station'),
+            document.getElementById('re-end-station'),
+            document.getElementById('via1-station'),
+            document.getElementById('via2-station'),
+            document.getElementById('via3-station'),
+            document.getElementById('re-via1'),
+            document.getElementById('re-via2'),
+            document.getElementById('re-via3')
+        ];
+
+        selects.forEach(sel => {
+            const isVia = sel.id.includes('via');
+            const currentVal = sel.value;
+            sel.innerHTML = '';
+            
+            if (isVia) {
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.innerText = `-- ${sel.id.includes('1') ? '経由1' : sel.id.includes('2') ? '経由2' : '経由3'} (任意) --`;
+                sel.appendChild(defaultOpt);
+            }
+
+            allUniqueStations.forEach(station => {
+                sel.add(new Option(station, station));
+            });
+            if (isVia) sel.value = currentVal;
+        });
+
+        const endSel = document.getElementById('end-station-select');
+        const reEndSel = document.getElementById('re-end-station');
+        if (endSel.options.length > 1) {
+            endSel.selectedIndex = 1;
+            reEndSel.selectedIndex = 1;
+        }
+    }
+    initStations();
+
+    function startApp() {
+        const boot = document.getElementById('boot-screen');
+        boot.style.opacity = '0';
+        setTimeout(() => { boot.style.display = 'none'; }, 800);
+    }
+
+    function getSegmentStations(fromSt, toSt) {
+        if (fromSt === toSt) return [fromSt];
+
+        for (let key in lines) {
+            let arr = lines[key];
+            let idxA = arr.indexOf(fromSt);
+            let idxB = arr.indexOf(toSt);
+            if (idxA !== -1 && idxB !== -1) {
+                let sliceArr = [];
+                if (idxA <= idxB) {
+                    sliceArr = arr.slice(idxA, idxB + 1);
+                } else {
+                    sliceArr = arr.slice(idxB, idxA + 1).reverse();
+                }
+                return sliceArr;
+            }
+        }
+
+        if ((fromSt === "千鳥" && toSt === "南千鳥-信号場") || (fromSt === "南千鳥-信号場" && toSt === "千鳥")) {
+            return [fromSt, toSt];
+        }
+        if ((fromSt === "南千鳥-信号場" && toSt === "南千鳥") || (fromSt === "南千鳥" && toSt === "南千鳥-信号場")) {
+            return [fromSt, toSt];
+        }
+
+        let graph = {};
+        function addEdge(u, v) {
+            if (!graph[u]) graph[u] = [];
+            if (!graph[v]) graph[v] = [];
+            if (!graph[u].includes(v)) graph[u].push(v);
+            if (!graph[v].includes(u)) graph[v].push(u);
+        }
+        for (let key in lines) {
+            let arr = lines[key];
+            for (let i = 0; i < arr.length - 1; i++) {
+                addEdge(arr[i], arr[i+1]);
+            }
+        }
+        addEdge("千鳥", "南千鳥-信号場");
+        addEdge("南千鳥-信号場", "南千鳥");
+
+        let queue = [[fromSt]];
+        let visited = new Set([fromSt]);
+
+        while (queue.length > 0) {
+            let path = queue.shift();
+            let curr = path[path.length - 1];
+            if (curr === toSt) return path;
+
+            if (graph[curr]) {
+                for (let next of graph[curr]) {
+                    if (!visited.has(next) && !path.includes(next)) {
+                        visited.add(next);
+                        queue.push([...path, next]);
+                    }
+                }
+            }
+        }
+        return [fromSt, toSt];
+    }
+
+    function getRouteStations(startSt, endSt, vias = []) {
+        let activeVias = vias.filter(v => v && v !== "");
+        let waypoints = [startSt, ...activeVias, endSt];
+        let fullRoute = [];
+
+        for (let i = 0; i < waypoints.length - 1; i++) {
+            let subPath = getSegmentStations(waypoints[i], waypoints[i+1]);
+            if (i > 0) {
+                subPath.shift();
+            }
+            fullRoute.push(...subPath);
+        }
+
+        return fullRoute.filter((st, idx, arr) => idx === 0 || st !== arr[idx - 1]);
+    }
+
+    function applyTrainTypeClass(trainType) {
+        const banner = document.getElementById('staf-type-banner');
+        banner.className = "nankai-type-banner";
+        
+        if (trainType === "各駅停車") {
+            banner.classList.add('type-local');
+        } else if (trainType === "準急") {
+            banner.classList.add('type-semi');
+        } else if (trainType === "快速" || trainType === "区間急行") {
+            banner.classList.add('type-rapid');
+        } else if (trainType === "急行") {
+            banner.classList.add('type-express');
+        } else if (trainType === "空港急行") {
+            banner.classList.add('type-airport');
+        } else if (trainType === "快速急行") {
+            banner.classList.add('type-rapid-express');
+        } else if (trainType.includes("特急")) {
+            banner.classList.add('type-limited-express');
+        } else {
+            banner.classList.add('type-default');
+        }
+    }
+
+    function generateStaf(trainNum, trainType, startSt, endSt, routeVariant = "", vias = [], carCount = "4両") {
+        document.getElementById('staf-train-type-text').innerText = trainType;
+        document.getElementById('staf-train-num-text').innerText = `第 ${trainNum} レ`;
+        document.getElementById('staf-car-count-text').innerText = carCount;
+
+        applyTrainTypeClass(trainType);
+
+        if (startSt === endSt) {
+            alert('始発駅と終着駅が同じです');
+            return;
+        }
+
+        currentStationList = [];
+        const stationList = getRouteStations(startSt, endSt, vias);
+        const stopRule = trainTypeSettings[trainType];
+        
+        stationList.forEach((stName, index) => {
+            let action = '停車';
+            let isPass = false;
+
+            if (index !== 0 && index !== stationList.length - 1) {
+                if (stopRule !== "ALL") {
+                    if (Array.isArray(stopRule)) {
+                        let isOutsideOperationArea = false;
+                        if (trainType === "快速") {
+                            const rapidLineStations = ["問屋町", "新赤堀", "赤堀", "塚野", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"];
+                            if (rapidLineStations.includes(stName)) {
+                                isOutsideOperationArea = true;
+                            }
+                        }
+
+                        if (!isOutsideOperationArea && !stopRule.includes(stName)) {
+                            isPass = true;
+                        }
+                    }
+                }
+            }
+
+            if (isPass) action = '通過';
+            if (index === 0) action = '始発';
+            if (index === stationList.length - 1) action = '終着';
+
+            const overrideState = stationOverrides[stName];
+            if (index !== 0 && index !== stationList.length - 1) {
+                if (overrideState === 'stop') action = '臨時停車';
+                else if (overrideState === 'pass') action = '臨時通過';
+            }
+
+            currentStationList.push({ name: stName, action: action });
+        });
+
+        currentPage = 0;
+        renderStafPage();
+    }
+
+    function renderStafPage() {
+        const wrapper = document.getElementById('staf-page-wrapper');
+        
+        wrapper.classList.remove('fade-in');
+        wrapper.classList.add('fade-out');
+
+        setTimeout(() => {
+            wrapper.innerHTML = '';
+            
+            const startIndex = currentPage * ITEMS_PER_PAGE;
+            const pageItems = currentStationList.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+            
+            const half = Math.ceil(pageItems.length / 2);
+            const col1Items = pageItems.slice(0, half);
+            const col2Items = pageItems.slice(half);
+
+            function createColumnHtml(items, baseIdxOffset) {
+                let html = '<div class="nankai-column">';
+                for (let i = 0; i < 9; i++) {
+                    let item = items[i];
+                    if (item) {
+                        let globalIdx = startIndex + baseIdxOffset + i;
+                        let isCurrent = (globalIdx === currentStationIndex);
+
+                        let isRed = (item.action === '始発' || item.action === '終着' || item.action === '停車');
+                        let isPass = (item.action === '通過' || item.action === '臨時通過');
+                        let isExtraStop = (item.action === '臨時停車');
+                        
+                        let rowClass = '';
+                        if (isPass) rowClass = 'pass-row';
+                        if (isExtraStop) rowClass = 'extra-stop';
+                        if (isCurrent) rowClass += ' current-station-row';
+
+                        let shortName = item.name.length > 8 ? item.name.substring(0, 8) : item.name;
+                        
+                        let actionClass = '';
+                        if (isRed) actionClass = 'bg-red';
+                        if (isExtraStop) actionClass = 'extra-stop';
+                        if (item.action === '臨時通過') actionClass = 'extra-pass';
+
+                        let btnHtml = '';
+                        if (userRole === 'driver' && item.action !== '始発' && item.action !== '終着') {
+                            if (item.action === '通過' || item.action === '臨時通過') {
+                                btnHtml = `<button onclick="event.stopPropagation(); setOverride('${item.name}', 'stop')" style="padding: 1px 2px; font-size: 8px; background: #d9534f; color: #fff; border: none; border-radius: 2px; cursor: pointer; width: auto; margin:0 2px;">臨停</button>`;
+                            } else {
+                                btnHtml = `<button onclick="event.stopPropagation(); setOverride('${item.name}', 'pass')" style="padding: 1px 2px; font-size: 8px; background: #0275d8; color: #fff; border: none; border-radius: 2px; cursor: pointer; width: auto; margin:0 2px;">臨通</button>`;
+                            }
+                        }
+
+                        html += `
+                            <div class="nankai-row ${rowClass}" onclick="selectStation(${globalIdx}, '${item.name}', '${item.action}')">
+                                <div class="cell-station ${actionClass}">${shortName}</div>
+                                <div class="cell-code">${isPass ? 'レ' : 'テ'}</div>
+                                <div class="cell-action ${actionClass}">${item.action} ${btnHtml}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="nankai-row">
+                                <div class="cell-station"></div>
+                                <div class="cell-code"></div>
+                                <div class="cell-action"></div>
+                            </div>
+                        `;
+                    }
+                }
+                html += '</div>';
+                return html;
+            }
+
+            wrapper.innerHTML = createColumnHtml(col1Items, 0) + createColumnHtml(col2Items, half);
+
+            wrapper.classList.remove('fade-out');
+            wrapper.classList.add('fade-in');
+        }, 200);
+    }
+
+    window.selectStation = function(idx, stationName, actionText) {
+        if (userRole === 'conductor') return;
+        currentStationIndex = idx;
+        renderStafPage();
+        
+        if (currentTrainNum) {
+            db.ref('operations/' + currentTrainNum).update({
+                currentStationIndex: idx,
+                currentStationName: stationName,
+                actionText: actionText,
+                updatedAt: Date.now()
+            });
+        }
+    };
+
+    window.changePage = function(direction) {
+        const maxPage = Math.ceil(currentStationList.length / ITEMS_PER_PAGE) - 1;
+        let nextP = currentPage + direction;
+        if (nextP >= 0 && nextP <= maxPage) {
+            currentPage = nextP;
+            renderStafPage();
+        }
+    };
+
+    window.setOverride = function(stName, state) {
+        if (stationOverrides[stName] === state) {
+            delete stationOverrides[stName];
+        } else {
+            stationOverrides[stName] = state;
+        }
+        
+        const myTrain = document.getElementById('my-train-display').innerText;
+        const trainType = document.getElementById('re-train-type').value;
+        const carCount = document.getElementById('re-car-count').value;
+        const routeVariant = document.getElementById('re-train-route-variant').value.trim();
+        const startSt = document.getElementById('re-start-station').value;
+        const endSt = document.getElementById('re-end-station').value;
+        const vias = [
+            document.getElementById('re-via1').value,
+            document.getElementById('re-via2').value,
+            document.getElementById('re-via3').value
+        ];
+        generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
+    };
+
+    window.updateStafFromUI = function() {
+        const myTrain = document.getElementById('my-train-display').innerText;
+        const trainType = document.getElementById('re-train-type').value;
+        const carCount = document.getElementById('re-car-count').value;
+        const routeVariant = document.getElementById('re-train-route-variant').value.trim();
+        const startSt = document.getElementById('re-start-station').value;
+        const endSt = document.getElementById('re-end-station').value;
+        const vias = [
+            document.getElementById('re-via1').value,
+            document.getElementById('re-via2').value,
+            document.getElementById('re-via3').value
+        ];
+        
+        stationOverrides = {};
+        currentStationIndex = 0;
+        
+        const stafArea = document.getElementById('staf-area');
+        stafArea.classList.remove('show');
+        generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
+        
+        db.ref('operations/' + myTrain).update({
+            trainType: trainType,
+            carCount: carCount,
+            startSt: startSt,
+            endSt: endSt,
+            routeVariant: routeVariant,
+            vias: vias,
+            updatedAt: Date.now()
+        });
+
+        setTimeout(() => { stafArea.classList.add('show'); }, 50);
+    };
+
+    window.login = function() {
+        const role = document.getElementById('role-select').value;
+        userRole = role;
+        const myTrain = role === 'shirei' ? 'SHIREI' : document.getElementById('my-train').value.trim();
+        currentTrainNum = myTrain;
+        
+        if (role !== 'shirei' && !myTrain) { alert('列車番号を入力してください'); return; }
+
+        document.getElementById('login-zone').className = 'hidden';
+        document.getElementById('main-zone').className = '';
+        document.getElementById('my-train-display').innerText = myTrain;
+        document.getElementById('my-role-display').innerText = role === 'driver' ? '運転士' : role === 'conductor' ? '車掌' : '指令';
+
+        if (role === 'shirei') {
+            document.getElementById('shirei-tools').classList.remove('hidden');
+            document.getElementById('driver-alert-tools').classList.add('hidden');
+            document.getElementById('staf-area').classList.add('hidden');
+            document.getElementById('driver-reselect-area').classList.add('hidden');
+        } else {
+            document.getElementById('shirei-tools').classList.add('hidden');
+            if (role === 'driver' || role === 'conductor') {
+                document.getElementById('driver-alert-tools').classList.remove('hidden');
+            } else {
+                document.getElementById('driver-alert-tools').classList.add('hidden');
+            }
+
+            db.ref('operations/' + myTrain).once('value', (snapshot) => {
+                const opData = snapshot.val();
+                let trainType = "各駅停車";
+                let carCount = "4両";
+                let startSt = allUniqueStations[0];
+                let endSt = allUniqueStations[1];
+                let routeVariant = "";
+                let vias = ["", "", ""];
+
+                if (opData) {
+                    trainType = opData.trainType || trainType;
+                    carCount = opData.carCount || carCount;
+                    startSt = opData.startSt || startSt;
+                    endSt = opData.endSt || endSt;
+                    routeVariant = opData.routeVariant || routeVariant;
+                    vias = opData.vias || vias;
+                    if (opData.currentStationIndex !== undefined) {
+                        currentStationIndex = opData.currentStationIndex;
+                    }
+                } else if (role === 'driver') {
+                    trainType = document.getElementById('train-type-select').value;
+                    carCount = document.getElementById('car-count-select').value;
+                    routeVariant = document.getElementById('train-route-variant').value.trim();
+                    startSt = document.getElementById('start-station-select').value;
+                    endSt = document.getElementById('end-station-select').value;
+                    vias = [
+                        document.getElementById('via1-station').value,
+                        document.getElementById('via2-station').value,
+                        document.getElementById('via3-station').value
+                    ];
+
+                    db.ref('operations/' + myTrain).set({
+                        trainType: trainType,
+                        carCount: carCount,
+                        startSt: startSt,
+                        endSt: endSt,
+                        routeVariant: routeVariant,
+                        vias: vias,
+                        currentStationIndex: 0,
+                        updatedAt: Date.now()
+                    });
+                }
+
+                if (role === 'driver') {
+                    document.getElementById('re-train-type').value = trainType;
+                    document.getElementById('re-car-count').value = carCount;
+                    document.getElementById('re-train-route-variant').value = routeVariant;
+                    document.getElementById('re-start-station').value = startSt;
+                    document.getElementById('re-end-station').value = endSt;
+                    document.getElementById('re-via1').value = vias[0];
+                    document.getElementById('re-via2').value = vias[1];
+                    document.getElementById('re-via3').value = vias[2];
+                    document.getElementById('driver-reselect-area').classList.remove('hidden');
+                } else {
+                    document.getElementById('driver-reselect-area').classList.add('hidden');
+                }
+
+                generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
+                const stafArea = document.getElementById('staf-area');
+                stafArea.classList.remove('hidden');
+                setTimeout(() => { stafArea.classList.add('show'); }, 50);
+
+                db.ref('operations/' + myTrain).on('value', (s) => {
+                    const val = s.val();
+                    if (!val) return;
+                    if (val.currentStationIndex !== undefined && val.currentStationIndex !== currentStationIndex) {
+                        currentStationIndex = val.currentStationIndex;
+                        renderStafPage();
+                    }
+                });
+            });
+
+            const onlineRef = db.ref('online/' + myTrain);
+            onlineRef.set(true);
+            onlineRef.onDisconnect().remove();
+
+            const operationsRef = db.ref('operations/' + myTrain);
+            operationsRef.onDisconnect().remove();
+        }
+    };
+</script>
+</body>
+</html>
