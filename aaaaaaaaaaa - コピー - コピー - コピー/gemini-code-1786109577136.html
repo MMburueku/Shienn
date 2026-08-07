@@ -643,10 +643,6 @@
     </div>
 </div>
 
-<audio id="alert-sound" src="alert.m4a"></audio>
-<audio id="alert-clear-sound" src="alert_clear.m4a"></audio>
-<audio id="call-sound" src="call.mp3"></audio>
-
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
@@ -737,7 +733,7 @@
     let currentStationIndex = 0; 
     let currentTrainNum = "";
     let userRole = "";
-    let ngWordsList = []; // NGワード管理用配列
+    let ngWordsList = [];
 
     const firebaseConfig = { apiKey: "AIzaSyB3pG3qaYMFw1g-Y5iUIcLhDC6XwfvZsm0", databaseURL: "https://hozyo-5ff7a-default-rtdb.firebaseio.com", projectId: "hozyo-5ff7a" };
     firebase.initializeApp(firebaseConfig);
@@ -753,7 +749,7 @@
                 inputEl.value = val;
             }
         } else {
-            ngWordsList = ["うんこ", "うんち", ];
+            ngWordsList = ["うんこ", "うんち"];
         }
     });
 
@@ -766,7 +762,7 @@
         });
     }
 
-    // 防護発報の監視リスナー
+    // 防護発報の監視リスナー（音声再生なし）
     db.ref('alert').on('child_added', (snapshot) => {
         handleAlertData(snapshot.key, snapshot.val());
     });
@@ -776,24 +772,10 @@
 
     function handleAlertData(key, data) {
         if (!data) return;
-        const alertSound = document.getElementById('alert-sound');
-        const clearSound = document.getElementById('alert-clear-sound');
-
-        if (data.type === 'ALL') {
-            if (clearSound) { clearSound.pause(); clearSound.currentTime = 0; }
-            if (alertSound) { alertSound.currentTime = 0; alertSound.play().catch(e => console.log("音声再生エラー:", e)); }
-        } else if (data.type === 'SPECIFIC') {
-            if (userRole === 'shirei' || key === currentTrainNum) {
-                if (clearSound) { clearSound.pause(); clearSound.currentTime = 0; }
-                if (alertSound) { alertSound.currentTime = 0; alertSound.play().catch(e => console.log("音声再生エラー:", e)); }
-            }
-        } else if (data.type === 'CLEARED') {
-            if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
-            if (clearSound) { clearSound.currentTime = 0; clearSound.play().catch(e => console.log("音声再生エラー:", e)); }
-        }
+        // 音声再生処理を削除しました
     }
 
-    // 通信リスナーの設定（メッセージ追加時に自分以外、あるいは新規メッセージ到着時のみ鳴るように判定）
+    // 通信リスナーの設定
     db.ref('comms').on('value', (snapshot) => {
         const logEl = document.getElementById('comms-log');
         if (!logEl) return;
@@ -828,19 +810,10 @@
 
         if (data && key !== lastCommsKey) {
             lastCommsKey = key;
-            // 自分が送信したメッセージでない場合のみ呼び出し音を鳴らす（または単純に着信音を鳴らす）
-            const alertSound = document.getElementById('alert-sound');
-            if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
-
-            const callSound = document.getElementById('call-sound');
-            if (callSound) {
-                callSound.currentTime = 0;
-                callSound.play().catch(e => console.log("音声再生エラー:", e));
-            }
+            // メッセージ送信時（受信時）の音声再生処理を削除しました
         }
     });
 
-    // 初回読み込み完了フラグを立てる
     db.ref('comms').once('value', () => {
         isInitialCommsLoad = false;
     });
@@ -922,7 +895,6 @@
         });
     }
 
-    // メッセージ送信機能（送信時の不要な音声再生を完全に排除）
     function sendCustomMessage() {
         const target = document.getElementById('msg-target-select').value;
         const msgInput = document.getElementById('general-custom-msg');
@@ -933,7 +905,6 @@
             return;
         }
 
-        // NGワードチェックおよびフィルタリング処理
         for (let word of ngWordsList) {
             if (word && msg.includes(word)) {
                 const regex = new RegExp(word, 'g');
@@ -1010,20 +981,9 @@
         document.getElementById('watch-modal').style.display = 'none';
     }
 
-    // 乗務終了ボタン：すべての音源を確実に完全停止してから終了処理を実行
     function endDuty() {
         if (confirm("乗務終了処理を行いますか？")) {
-            const alertSound = document.getElementById('alert-sound');
-            const clearSound = document.getElementById('alert-clear-sound');
-            const callSound = document.getElementById('call-sound');
-
-            // すべての音源を停止し、再生位置を初期化
-            [alertSound, clearSound, callSound].forEach(sound => {
-                if (sound) {
-                    sound.pause();
-                    sound.currentTime = 0;
-                }
-            });
+            // 乗務終了時の音声停止処理を削除しました
 
             if (currentTrainNum) {
                 db.ref('online/' + currentTrainNum).remove();
@@ -1051,6 +1011,7 @@
         ];
 
         selects.forEach(sel => {
+            if (!sel) return;
             const isVia = sel.id.includes('via');
             const currentVal = sel.value;
             sel.innerHTML = '';
@@ -1070,8 +1031,10 @@
 
         const endSel = document.getElementById('end-station-select');
         const reEndSel = document.getElementById('re-end-station');
-        if (endSel.options.length > 1) {
+        if (endSel && endSel.options.length > 1) {
             endSel.selectedIndex = 1;
+        }
+        if (reEndSel && reEndSel.options.length > 1) {
             reEndSel.selectedIndex = 1;
         }
     }
@@ -1162,6 +1125,7 @@
 
     function applyTrainTypeClass(trainType) {
         const banner = document.getElementById('staf-type-banner');
+        if (!banner) return;
         banner.className = "nankai-type-banner";
         
         if (trainType === "各駅停車") {
@@ -1184,9 +1148,13 @@
     }
 
     function generateStaf(trainNum, trainType, startSt, endSt, routeVariant = "", vias = [], carCount = "4両") {
-        document.getElementById('staf-train-type-text').innerText = trainType;
-        document.getElementById('staf-train-num-text').innerText = `第 ${trainNum} レ`;
-        document.getElementById('staf-car-count-text').innerText = carCount;
+        const typeTextEl = document.getElementById('staf-train-type-text');
+        const numTextEl = document.getElementById('staf-train-num-text');
+        const countTextEl = document.getElementById('staf-car-count-text');
+
+        if (typeTextEl) typeTextEl.innerText = trainType;
+        if (numTextEl) numTextEl.innerText = `第 ${trainNum} レ`;
+        if (countTextEl) countTextEl.innerText = carCount;
 
         applyTrainTypeClass(trainType);
 
@@ -1240,6 +1208,7 @@
 
     function renderStafPage() {
         const wrapper = document.getElementById('staf-page-wrapper');
+        if (!wrapper) return;
         
         wrapper.classList.remove('fade-in');
         wrapper.classList.add('fade-out');
