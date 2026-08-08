@@ -187,7 +187,6 @@
         .cell-code { width: 16%; border-right: 1px solid #000; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #000; }
         .cell-action { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; }
 
-        .bg-red { background: #0073eb !important; color: #fff !important; }
         .pass-row { color: #888; background: #f9f9f9; }
         .extra-stop { color: #d9534f !important; background: #fff3cd !important; }
         .extra-pass { color: #0275d8 !important; background: #e2e3e5 !important; }
@@ -417,7 +416,7 @@
         <label style="font-size:0.8em; text-align:left; display:block; margin-top:4px;">鉄道ネットワーク（路線データ）選択:</label>
         <select id="railway-network-select" onchange="changeRailwayNetwork()" style="margin: 2px 0; background: #002244; color: #FFD700; font-weight: bold;">
             <option value="robutsu">尾羽急</option>
-            <option value="fictional_b">？？？ (B線)</option>
+            <option value="fictional_b">鴨原</option>
             <option value="fictional_c">？？？ (C線)</option>
         </select>
 
@@ -600,23 +599,36 @@
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
 <script>
-    // 鉄道ネットワークごとに種別ごとのカラー設定（styleプロパティ）を内包できるように拡張
+    // 各路線データと、路線ごとの停車駅セル用カラー（lineColor：本線・支線等で個別設定可能）および種別設定を定義
     const railwayNetworks = {
         robutsu: {
             name: "尾羽急",
+            // 路線・系統ごとに色を設定できるようにオブジェクトに変更
+            lineColors: {
+                main: { bg: "#0073eb", color: "#fff" },          // 本線（青系）
+                rapid_line: { bg: "#0073eb", color: "#fff" },     // 高速系線区
+                oba_branch: { bg: "#0073eb", color: "#fff" },     // 支線（例：緑系で色分け）
+                airport: { bg: "#F18A00", color: "#fff" },        // 空港線（例：オレンジ系）
+                link: { bg: "#1A00A9", color: "#fff" },
+                itoi: { bg: "#4C7523", color: "#fff" },           // 糸井線
+                chidori_branch: { bg: "#1A00A9", color: "#fff" }, // 千鳥支線
+                tobigane: { bg: "#DC2D04", color: "#fff" },       // 飛金線（例：紫系）
+                kanada: { bg: "#FCCC16", color: "#fff" },
+                hakokura_link: { bg: "#FCCC16", color: "#fff" }
+            },
+            defaultLineColor: { bg: "#0073eb", color: "#fff" },
             lines: {
                 main: ["尾羽原", "井口", "梅郷", "雲中", "安越", "十川真砂橋", "千峰", "南雲谷", "雲谷", "長峰", "西高徳", "高徳", "明神前", "舞子台", "紀田", "穂", "瀬美", "余美", "千鳥"],
                 rapid_line: ["千鳥", "問屋町", "問屋蔵前", "赤堀大沢", "赤堀", "新赤堀", "塚野", "金田", "百鳥", "西百鳥", "支線尾羽", "北尾羽"],
                 oba_branch: ["北尾羽", "尾羽原"],
                 airport: ["高徳", "新高徳", "高徳整備場北", "高徳空港"],
                 link: ["南千鳥", "問屋町"],
-                chidori_branch: ["千鳥", "南千鳥", "奥千鳥", "千鳥山道", "本郷神宮前", "本郷"],
                 itoi: ["井口", "上井口", "参田町", "東本郷", "本郷", "西問屋町", "問屋町"],
+                chidori_branch: ["千鳥", "南千鳥", "奥千鳥", "千鳥山道", "本郷神宮前", "本郷"],
                 tobigane: ["梅郷", "雲中", "水橋", "飛岡", "垂岡", "飛水竜田", "南竜田", "大原", "新塚", "飛水柏原", "上金田", "金田新都心"],
                 kanada: ["金田", "鵲橋", "金田市", "金田空港", "金田新都心"],
                 hakokura_link: ["百鳥", "南箱倉", "新箱倉金田", "金田市"]
             },
-            // 各種別の停車駅ルールと色を指定 (bg: 背景色, color: 文字色)
             trainTypeSettings: {
                 "各駅停車": { stopRule: "ALL", bg: "#0000ff", color: "#fff" },
                 "準急": { 
@@ -644,16 +656,23 @@
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
             }
         },
-        fictional_b: {
-            name: "？？？ (B線)",
+fictional_b: {
+            name: "鴨原",
+            lineColors: {
+                main: { bg: "#0073eb", color: "#fff" },
+                hokuto: { bg: "#6AA84F", color: "#fff" }, // ← ここにカンマを追加
+                branch: { bg: "#e67e22", color: "#fff" }  // 支線用カラー            
+            },
+            defaultLineColor: { bg: "#4A90E2", color: "#fff" },
             lines: {
                 main: ["三田", "横河", "荒川", "長町", "立町", "長塚", "松山", "陸前今庄", "阿栗吉山", "名取", "南流山", "岩富", "山栄"],
+                hokuto: ["山栄", "日東", "元山", "栄町", "三ノ関", "陸中松前", "陸中前川"],
                 branch: ["名取", "岩見大山", "釜浜", "羽沢"]
             },
             trainTypeSettings: {
                 "各駅停車": { stopRule: "ALL", bg: "#4A90E2", color: "#ffffff" },
-                "快速": { stopRule: ["三田", "横河", "荒川", "長町", "陸前今庄", "名取", "山栄"], bg: "#FF0000", color: "#ffffff" },
-                "鴨原特急": { stopRule: ["三田", "長町", "陸前今庄", "阿栗吉山", "山栄"], bg: "#993399", color: "#ffffff" },
+                "快速": { stopRule: ["三田", "横河", "荒川", "長町", "陸前今庄", "名取", "山栄", "日東", "元山", "栄町", "三ノ関", "陸中松前", "陸中前川"], bg: "#FF0000", color: "#ffffff" },
+                "鴨原特急": { stopRule: ["三田", "長町", "陸前今庄", "阿栗吉山", "山栄", "日東", "元山", "栄町", "三ノ関", "陸中松前", "陸中前川"], bg: "#993399", color: "#ffffff" },
                 "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
@@ -661,6 +680,10 @@
         },
         fictional_c: {
             name: "？？？ (C線)",
+            lineColors: {
+                express_line: { bg: "#2e8b57", color: "#fff" }
+            },
+            defaultLineColor: { bg: "#2e8b57", color: "#fff" },
             lines: {
                 express_line: ["C始発", "C要衝", "C都市", "C快速", "C終点"]
             },
@@ -677,6 +700,8 @@
     let currentNetworkKey = "robutsu";
     let lines = railwayNetworks[currentNetworkKey].lines;
     let trainTypeSettings = railwayNetworks[currentNetworkKey].trainTypeSettings;
+    let currentLineColors = railwayNetworks[currentNetworkKey].lineColors;
+    let currentDefaultLineColor = railwayNetworks[currentNetworkKey].defaultLineColor;
 
     let allUniqueStations = [];
 
@@ -726,6 +751,8 @@
         currentNetworkKey = selectEl.value;
         lines = railwayNetworks[currentNetworkKey].lines;
         trainTypeSettings = railwayNetworks[currentNetworkKey].trainTypeSettings;
+        currentLineColors = railwayNetworks[currentNetworkKey].lineColors;
+        currentDefaultLineColor = railwayNetworks[currentNetworkKey].defaultLineColor;
         updateAllUniqueStations();
         updateTrainTypeSelects();
         initStations();
@@ -1097,12 +1124,24 @@
         return fullRoute.filter((st, idx, arr) => idx === 0 || st !== arr[idx - 1]);
     }
 
-    // 路線ごとに定義された種別のカラー（背景・文字）を動的に適用する関数
+    // 指定された駅がどの路線（本線・支線等）に属しているかを判定し、対応するカラーを返す関数
+    function getStationLineColor(stationName) {
+        // 各路線キーごとに駅が含まれているかチェックし、該当すればそのlineColors設定を返す
+        for (let lineKey in lines) {
+            if (lines[lineKey].includes(stationName)) {
+                if (currentLineColors && currentLineColors[lineKey]) {
+                    return currentLineColors[lineKey];
+                }
+            }
+        }
+        return currentDefaultLineColor;
+    }
+
+    // 上部の列車種別バナーの色を設定
     function applyTrainTypeClass(trainType) {
         const banner = document.getElementById('staf-type-banner');
         if (!banner) return;
         
-        // インラインスタイルをリセット
         banner.style.backgroundColor = "";
         banner.style.color = "";
         
@@ -1202,10 +1241,18 @@
 
                         let shortName = item.name.length > 8 ? item.name.substring(0, 8) : item.name;
                         
+                        // 駅ごとに属する路線（本線・支線等）のカラーを動的に取得して適用
+                        let cellStyle = '';
                         let actionClass = '';
-                        if (isRed) actionClass = 'bg-red';
-                        if (isExtraStop) actionClass = 'extra-stop';
-                        if (item.action === '臨時通過') actionClass = 'extra-pass';
+                        
+                        if (isRed) {
+                            let stationLineColor = getStationLineColor(item.name);
+                            cellStyle = `background-color: ${stationLineColor.bg}; color: ${stationLineColor.color};`;
+                        } else if (isExtraStop) {
+                            actionClass = 'extra-stop';
+                        } else if (item.action === '臨時通過') {
+                            actionClass = 'extra-pass';
+                        }
 
                         let btnHtml = '';
                         if (userRole === 'driver' && item.action !== '始発' && item.action !== '終着') {
@@ -1216,11 +1263,17 @@
                             }
                         }
 
+                        // 停車の列のテはそのままで、通過の列のテだけレにするための処理
+                        let cellCodeText = 'テ';
+                        if (isPass) {
+                            cellCodeText = 'レ';
+                        }
+
                         html += `
                             <div class="nankai-row ${rowClass}" onclick="selectStation(${globalIdx}, '${item.name}', '${item.action}')">
-                                <div class="cell-station ${actionClass}">${shortName}</div>
-                                <div class="cell-code">${isPass ? 'レ' : 'テ'}</div>
-                                <div class="cell-action ${actionClass}">${item.action} ${btnHtml}</div>
+                                <div class="cell-station ${actionClass}" style="${cellStyle}">${shortName}</div>
+                                <div class="cell-code">${cellCodeText}</div>
+                                <div class="cell-action ${actionClass}" style="${cellStyle}">${item.action} ${btnHtml}</div>
                             </div>
                         `;
                     } else {
@@ -1402,7 +1455,6 @@
                     document.getElementById('re-via3').value = vias[2];
                     document.getElementById('driver-reselect-area').classList.remove('hidden');
                 } else {
-                    document.getElementById('driver-restyle-area')?.classList.add('hidden');
                     document.getElementById('driver-reselect-area').classList.add('hidden');
                 }
 
