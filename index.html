@@ -94,7 +94,7 @@
             flex-direction: column;
         }
         .nankai-type-banner {
-            font-size: 1.1em;
+            font-size: 1.0em;
             font-weight: bold;
             text-align: center;
             height: 38px;
@@ -103,6 +103,13 @@
             justify-content: center;
             position: relative;
             border-bottom: 2px solid #000;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .staf-dest-badge {
+            font-size: 0.75em;
+            font-weight: normal;
+            opacity: 0.9;
         }
         .nankai-train-sub {
             display: flex;
@@ -370,6 +377,17 @@
 </head>
 <body>
 
+<!-- 音声再生用のオーディオ要素 -->
+<audio id="call-audio" preload="auto">
+    <source src="coll.mp3" type="audio/mp3">
+</audio>
+<audio id="alert-audio" preload="auto">
+    <source src="alert.m4a" type="audio/mp4">
+</audio>
+<audio id="alert-clear-audio" preload="auto">
+    <source src="alert_clear.m4a" type="audio/mp4">
+</audio>
+
 <div id="watch-modal" onclick="closeWatchModal()">
     <div class="big-watch-case" onclick="event.stopPropagation()">
         <div class="big-watch-crown"></div>
@@ -417,6 +435,7 @@
         <select id="railway-network-select" onchange="changeRailwayNetwork()" style="margin: 2px 0; background: #002244; color: #FFD700; font-weight: bold;">
             <option value="robutsu">尾羽急</option>
             <option value="fictional_b">鴨原</option>
+            <option value="fictional_sumire">すみれヶ丘</option>
             <option value="fictional_c">？？？ (C線)</option>
         </select>
 
@@ -491,6 +510,13 @@
                 <div style="font-weight: bold;">📞 指令通話・メッセージシステム</div>
                 <button onclick="resetCommsHistory()" style="background: #d9534f; color: #fff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer; width: auto; margin: 0;">交信履歴リセット</button>
             </div>
+            
+            <div style="margin: 4px 0;">
+                <button onclick="triggerCall()" style="background: #f0ad4e; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; padding: 8px; width: 100%;">
+                    🔔 呼び出しボタン
+                </button>
+            </div>
+
             <div id="comms-log" class="comms-log">通信ログ待機中...</div>
             
             <div style="display: flex; gap: 4px; margin-top: 4px;">
@@ -554,9 +580,11 @@
                         <div>定時運行を遵守</div>
                     </div>
                     <div class="nankai-train-info-area">
+                        <!-- 行先表示要素を追加 -->
                         <div id="staf-type-banner" class="nankai-type-banner">
                             <span class="nankai-direction">下り</span>
                             <span id="staf-train-type-text">各駅停車</span>
+                            <span id="staf-dest-text" class="staf-dest-badge">行先: --</span>
                         </div>
                         <div class="nankai-train-sub">
                             <div class="nankai-train-num" id="staf-train-num-text">第----レ</div>
@@ -599,20 +627,18 @@
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
 <script>
-    // 各路線データと、路線ごとの停車駅セル用カラー（lineColor：本線・支線等で個別設定可能）および種別設定を定義
     const railwayNetworks = {
         robutsu: {
             name: "尾羽急",
-            // 路線・系統ごとに色を設定できるようにオブジェクトに変更
             lineColors: {
-                main: { bg: "#0073eb", color: "#fff" },          // 本線（青系）
-                rapid_line: { bg: "#0073eb", color: "#fff" },     // 高速系線区
-                oba_branch: { bg: "#0073eb", color: "#fff" },     // 支線（例：緑系で色分け）
-                airport: { bg: "#F18A00", color: "#fff" },        // 空港線（例：オレンジ系）
+                main: { bg: "#0073eb", color: "#fff" },
+                rapid_line: { bg: "#0073eb", color: "#fff" },
+                oba_branch: { bg: "#0073eb", color: "#fff" },
+                airport: { bg: "#F18A00", color: "#fff" },
                 link: { bg: "#1A00A9", color: "#fff" },
-                itoi: { bg: "#4C7523", color: "#fff" },           // 糸井線
-                chidori_branch: { bg: "#1A00A9", color: "#fff" }, // 千鳥支線
-                tobigane: { bg: "#DC2D04", color: "#fff" },       // 飛金線（例：紫系）
+                itoi: { bg: "#4C7523", color: "#fff" },
+                chidori_branch: { bg: "#1A00A9", color: "#fff" },
+                tobigane: { bg: "#DC2D04", color: "#fff" },
                 kanada: { bg: "#FCCC16", color: "#fff" },
                 hakokura_link: { bg: "#FCCC16", color: "#fff" }
             },
@@ -656,12 +682,12 @@
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
             }
         },
-fictional_b: {
+        fictional_b: {
             name: "鴨原",
             lineColors: {
                 main: { bg: "#0073eb", color: "#fff" },
-                hokuto: { bg: "#6AA84F", color: "#fff" }, // ← ここにカンマを追加
-                branch: { bg: "#e67e22", color: "#fff" }  // 支線用カラー            
+                hokuto: { bg: "#6AA84F", color: "#fff" },
+                branch: { bg: "#e67e22", color: "#fff" }            
             },
             defaultLineColor: { bg: "#4A90E2", color: "#fff" },
             lines: {
@@ -678,14 +704,44 @@ fictional_b: {
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
             }
         },
+        fictional_sumire: {
+            name: "すみれヶ丘",
+            lineColors: {
+                subway: { bg: "#6B559C", color: "#fff" },
+                subwaybranch: { bg: "#6B559C", color: "#fff" },
+                NTline: { bg: "#337397", color: "#fff" },
+                Shikitetsu: { bg: "#F8D249", color: "#0C0E14" },            
+            },
+            defaultLineColor: { bg: "#4A90E2", color: "#fff" },
+            lines: {
+                subway: ["すみれヶ丘", "飯岡橋", "地区センター", "風間", "風間工業団地", "佳良木", "澄江町", "雨ヶ瀬"],
+                subwaybranch: ["風間工業団地", "風間凪町"],
+                NTline: ["雨ヶ瀬", "新鉄道雨ヶ瀬", "新雨ヶ瀬", "雨ヶ瀬NT", "咲原医大"],
+                Shikitetsu: ["咲原医大", "北咲原", "雨境", "ひかりの", "七ツ坂", "南涼花", "北涼花", "鳴海", "綺羅星"],
+            },
+            trainTypeSettings: {
+                "各駅停車": { stopRule: "ALL", bg: "#4A90E2", color: "#757576" },
+                "急行": { stopRule: ["すみれヶ丘", "風間", "風間工業団地", "澄江町", "雨ヶ瀬", "新鉄道雨ヶ瀬", "雨ヶ瀬NT", "咲原医大", "ひかりの", "南涼花", "鳴海", "綺羅星"], bg: "#1432F5", color: "#ffffff" },
+                "SUライナー": { stopRule: ["すみれヶ丘", "風間工業団地", "雨ヶ瀬", "咲原医大", "南涼花", "鳴海"], bg: "#6C559B", color: "#ffffff" },
+                "団体(SUタイプ)": { stopRule: ["すみれヶ丘", "風間工業団地", "雨ヶ瀬", "咲原医大", "南涼花", "鳴海"], bg: "#ffffff", color: "#ff0000" },
+                "臨時(SUタイプ)": { stopRule: ["すみれヶ丘", "風間工業団地", "雨ヶ瀬", "咲原医大", "南涼花", "鳴海"], bg: "#ffffff", color: "#ff0000" },
+                "回送(SUタイプ)": { stopRule: ["すみれヶ丘", "風間工業団地", "雨ヶ瀬", "咲原医大", "南涼花", "鳴海"], bg: "#ffffff", color: "#ff0000" },
+                "試運転(SUタイプ)": { stopRule: ["すみれヶ丘", "風間工業団地", "雨ヶ瀬", "咲原医大", "南涼花", "鳴海"], bg: "#ffffff", color: "#ff0000" },
+                "回送": { stopRule: "ALL", bg: "#ffffff", color: "#ff0000" },
+                "試運転": { stopRule: "ALL", bg: "#ffffff", color: "#ff0000" }
+
+            }
+        },
         fictional_c: {
             name: "？？？ (C線)",
             lineColors: {
-                express_line: { bg: "#2e8b57", color: "#fff" }
+                express_line: { bg: "#2e8b57", color: "#fff" },
+                branch_c: { bg: "#d9534f", color: "#fff" }
             },
             defaultLineColor: { bg: "#2e8b57", color: "#fff" },
             lines: {
-                express_line: ["C始発", "C要衝", "C都市", "C快速", "C終点"]
+                express_line: ["C始発", "C要衝", "C都市", "C快速", "C終点"],
+                branch_c: ["C都市", "C支線北", "C支線終点"]
             },
             trainTypeSettings: {
                 "各駅停車": { stopRule: "ALL", bg: "#2e8b57", color: "#ffffff" },
@@ -782,11 +838,70 @@ fictional_b: {
         });
     }
 
-    db.ref('alert').on('child_added', (snapshot) => { handleAlertData(snapshot.key, snapshot.val()); });
-    db.ref('alert').on('child_changed', (snapshot) => { handleAlertData(snapshot.key, snapshot.val()); });
+    db.ref('alert').on('child_added', (snapshot) => {
+        handleAlertAudio(snapshot.val());
+    });
+    db.ref('alert').on('child_changed', (snapshot) => {
+        handleAlertAudio(snapshot.val());
+    });
 
-    function handleAlertData(key, data) {
-        if (!data) return;
+    function handleAlertAudio(data) {
+        if (!data || !data.type) return;
+        
+        const alertAudio = document.getElementById('alert-audio');
+        const clearAudio = document.getElementById('alert-clear-audio');
+
+        if (data.type === 'ALL' || data.type === 'SPECIFIC') {
+            if (clearAudio) {
+                clearAudio.pause();
+                clearAudio.currentTime = 0;
+            }
+            if (alertAudio) {
+                alertAudio.currentTime = 0;
+                alertAudio.play().catch(e => {
+                    console.log("防護無線音声の自動再生がブロックされました: ", e);
+                });
+            }
+        } else if (data.type === 'CLEARED') {
+            if (alertAudio) {
+                alertAudio.pause();
+                alertAudio.currentTime = 0;
+            }
+            if (clearAudio) {
+                clearAudio.currentTime = 0;
+                clearAudio.play().catch(e => {
+                    console.log("防護解除音声の自動再生がブロックされました: ", e);
+                });
+            }
+        }
+    }
+
+    db.ref('call_signal').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.timestamp) {
+            const audio = document.getElementById('call-audio');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => {
+                    console.log("音声の自動再生がブロックされました: ", e);
+                });
+            }
+
+            const logEl = document.getElementById('comms-log');
+            if (logEl) {
+                const timeStr = new Date(data.timestamp).toLocaleTimeString();
+                logEl.innerHTML += `<br>[${timeStr}] 🔔 ${data.sender} から呼び出し音が鳴りました`;
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+        }
+    });
+
+    function triggerCall() {
+        let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
+        db.ref('call_signal').set({
+            sender: senderName,
+            timestamp: Date.now()
+        });
     }
 
     db.ref('comms').on('value', (snapshot) => {
@@ -1051,6 +1166,20 @@ fictional_b: {
     initStations();
 
     function startApp() {
+        ['call-audio', 'alert-audio', 'alert-clear-audio'].forEach(id => {
+            const audio = document.getElementById(id);
+            if (audio) {
+                audio.muted = true;
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = false;
+                }).catch(e => {
+                    console.log(`Audio unlock failed (${id}): `, e);
+                });
+            }
+        });
+
         const boot = document.getElementById('boot-screen');
         boot.style.opacity = '0';
         setTimeout(() => { boot.style.display = 'none'; }, 800);
@@ -1124,9 +1253,7 @@ fictional_b: {
         return fullRoute.filter((st, idx, arr) => idx === 0 || st !== arr[idx - 1]);
     }
 
-    // 指定された駅がどの路線（本線・支線等）に属しているかを判定し、対応するカラーを返す関数
     function getStationLineColor(stationName) {
-        // 各路線キーごとに駅が含まれているかチェックし、該当すればそのlineColors設定を返す
         for (let lineKey in lines) {
             if (lines[lineKey].includes(stationName)) {
                 if (currentLineColors && currentLineColors[lineKey]) {
@@ -1137,7 +1264,6 @@ fictional_b: {
         return currentDefaultLineColor;
     }
 
-    // 上部の列車種別バナーの色を設定
     function applyTrainTypeClass(trainType) {
         const banner = document.getElementById('staf-type-banner');
         if (!banner) return;
@@ -1159,10 +1285,12 @@ fictional_b: {
         const typeTextEl = document.getElementById('staf-train-type-text');
         const numTextEl = document.getElementById('staf-train-num-text');
         const countTextEl = document.getElementById('staf-car-count-text');
+        const destTextEl = document.getElementById('staf-dest-text'); // 行先要素
 
         if (typeTextEl) typeTextEl.innerText = trainType;
         if (numTextEl) numTextEl.innerText = `第 ${trainNum} レ`;
         if (countTextEl) countTextEl.innerText = carCount;
+        if (destTextEl) destTextEl.innerText = `${endSt}行`; // 行先を反映
 
         applyTrainTypeClass(trainType);
 
@@ -1241,7 +1369,6 @@ fictional_b: {
 
                         let shortName = item.name.length > 8 ? item.name.substring(0, 8) : item.name;
                         
-                        // 駅ごとに属する路線（本線・支線等）のカラーを動的に取得して適用
                         let cellStyle = '';
                         let actionClass = '';
                         
@@ -1263,7 +1390,6 @@ fictional_b: {
                             }
                         }
 
-                        // 停車の列のテはそのままで、通過の列のテだけレにするための処理
                         let cellCodeText = 'テ';
                         if (isPass) {
                             cellCodeText = 'レ';
