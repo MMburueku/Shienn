@@ -464,11 +464,21 @@
         <label style="font-size:0.85em; text-align:left; display:block; margin-bottom: 2px;">接続するサーバーを選択:</label>
         <select id="boot-server-select" style="background: #001122; color: #FFD700; font-weight: bold; margin-bottom: 6px;"></select>
         
-        <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+        <div style="display: flex; gap: 4px; margin-bottom: 6px;">
             <button onclick="openNewServerModal()" style="background: #28a745; color: #fff; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; padding: 8px; flex: 1; font-size: 12px;">新規サーバー作成</button>
             <button onclick="deleteCurrentServer()" style="background: #d9534f; color: #fff; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; padding: 8px; flex: 1; font-size: 12px;">サーバー削除</button>
         </div>
 
+        <!-- 【配置変更】サーバー共有用URL欄を「接続してシステム起動」ボタンの上へ移動 -->
+        <div style="background: #001122; border: 1px solid #FFD700; border-radius: 5px; padding: 6px; margin-bottom: 10px; text-align: left;">
+            <label style="font-size: 0.75em; display: block; color: #FFD700; margin-bottom: 2px;">🔗 現在のサーバー共有URL:</label>
+            <div style="display: flex; gap: 4px;">
+                <input id="server-share-url-input" readonly style="margin: 0; padding: 4px; font-size: 11px; background: #000; color: #00ff00; border: 1px solid #444; width: 100%;" onclick="this.select()">
+                <button onclick="copyServerShareUrl()" style="background: #0073eb; color: #fff; border: none; border-radius: 3px; font-weight: bold; padding: 4px 8px; font-size: 11px; width: auto; margin: 0; cursor: pointer;">コピー</button>
+            </div>
+        </div>
+
+        <!-- 接続してシステム起動ボタン -->
         <button class="boot-btn" onclick="startApp()" style="width: 100%; background: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; padding: 10px; font-size: 14px;">接続してシステム起動</button>
     </div>
 </div>
@@ -1233,9 +1243,6 @@
                 audio.play().then(() => {
                     audio.pause();
                     audio.currentTime = 0;
-                    // 【修正】ここでミュートを解除せず、そのままにするか、
-                    // もしくはアンロック完了後に明示的にミュート状態に保持することで、
-                    // 再起動時（ボタン押下時）の再生音を完全に消音（ミュート）できます。
                     audio.muted = true; 
                 }).catch(e => {
                     console.log(`Audio unlock failed (${id}): `, e);
@@ -1502,9 +1509,47 @@
 let currentServerId = "default";
 let currentShireiName = "指令室";
 
+function updateShareUrlInput() {
+    const shareInput = document.getElementById('server-share-url-input');
+    if (shareInput) {
+        const baseUrl = window.location.origin + window.location.pathname;
+        shareInput.value = `${baseUrl}?server=${currentServerId}`;
+    }
+}
+
+function copyServerShareUrl() {
+    const shareInput = document.getElementById('server-share-url-input');
+    if (shareInput) {
+        shareInput.select();
+        shareInput.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(shareInput.value).then(() => {
+            alert("共有URLをコピーしました！");
+        }).catch(err => {
+            alert("コピーに失敗しました: " + err);
+        });
+    }
+}
+
 function initServerManager() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlServerParam = urlParams.get('server');
+
     let savedServers = localStorage.getItem("ServerManager_Servers");
     let servers = savedServers ? JSON.parse(savedServers) : { "default": "デフォルトサーバー" };
+
+    if (urlServerParam) {
+        currentServerId = urlServerParam;
+        localStorage.setItem("ServerManager_Current", currentServerId);
+        if (!servers[currentServerId]) {
+            servers[currentServerId] = "共有サーバー (" + currentServerId.substring(0, 8) + ")";
+            localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
+        }
+    } else {
+        let storedCurr = localStorage.getItem("ServerManager_Current");
+        if (storedCurr && servers[storedCurr]) {
+            currentServerId = storedCurr;
+        }
+    }
     
     const bootServerSelect = document.getElementById('boot-server-select');
     if (bootServerSelect) {
@@ -1517,14 +1562,11 @@ function initServerManager() {
         bootServerSelect.onchange = function() {
             currentServerId = this.value;
             localStorage.setItem("ServerManager_Current", currentServerId);
+            updateShareUrlInput();
         };
     }
 
-    let storedCurr = localStorage.getItem("ServerManager_Current");
-    if (storedCurr && servers[storedCurr]) {
-        currentServerId = storedCurr;
-        if(bootServerSelect) bootServerSelect.value = currentServerId;
-    }
+    updateShareUrlInput();
 }
 
 function openNewServerModal() {
@@ -1552,7 +1594,6 @@ function submitNewServer() {
     localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
     localStorage.setItem("ServerManager_Current", serverId);
     
-    // サーバー毎の路線設定をFirebaseに保存
     db.ref(`servers/${serverId}/networkKey`).set(selectedNetKey);
 
     closeNewServerModal();
