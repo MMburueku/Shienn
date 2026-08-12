@@ -11,11 +11,39 @@
         input, select, button { width: 100%; margin: 6px 0; padding: 8px; font-size: 14px; box-sizing: border-box; }
         .hidden { display: none !important; }
         
+        /* 起動・サーバー接続画面用スタイル */
         #boot-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000000; color: #FFD700; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 10000;
             transition: opacity 0.8s ease;
+            padding: 20px;
+        }
+
+        .boot-card {
+            background: #002244;
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        /* 新規サーバー作成モーダル */
+        #new-server-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none;
+            justify-content: center; align-items: center; z-index: 20000;
+        }
+        .modal-content {
+            background: #002244;
+            border: 2px solid #FFD700;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
         }
 
         @keyframes fadeInText {
@@ -29,19 +57,10 @@
         }
 
         .boot-title {
-            font-size: 2.2em; margin-bottom: 10px; text-align: center;
-            opacity: 0;
-            animation: fadeInText 1s ease 0.3s forwards;
+            font-size: 2.0em; margin-bottom: 5px; text-align: center;
         }
         .boot-sub {
-            font-size: 1.1em; color: #ccc;
-            opacity: 0;
-            animation: fadeInText 1s ease 0.8s forwards;
-        }
-        .boot-btn {
-            width: 200px; margin-top: 30px; background: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;
-            opacity: 0;
-            animation: fadeInText 1s ease 1.3s forwards;
+            font-size: 1.0em; color: #ccc; margin-bottom: 20px;
         }
 
         #staf-area {
@@ -415,10 +434,43 @@
     <button class="watch-close-btn" onclick="closeWatchModal()">閉じる</button>
 </div>
 
+<!-- 新規サーバー作成用モーダルUI（路線設定ボタンを追加） -->
+<div id="new-server-modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #FFD700;">新規サーバー作成</h3>
+        <input id="new-server-name-input" placeholder="サーバー名を入力..." style="background: #001122; color: #FFD700; border: 1px solid #FFD700;">
+        
+        <label style="font-size:0.8em; text-align:left; display:block; margin-top:8px; color: #FFD700;">鉄道ネットワーク（路線設定）選択:</label>
+        <select id="new-server-railway-network-select" style="margin: 2px 0 10px 0; background: #002244; color: #FFD700; font-weight: bold;">
+            <option value="robutsu">尾羽急</option>
+            <option value="fictional_b">鴨原</option>
+            <option value="fictional_sumire">すみれヶ丘</option>
+            <option value="fictional_c">？？？ (C線)</option>
+        </select>
+
+        <div style="display: flex; gap: 4px; margin-top: 10px;">
+            <button onclick="submitNewServer()" style="background: #FFD700; color: #000; font-weight: bold; flex: 1;">作成して接続</button>
+            <button onclick="closeNewServerModal()" style="background: #555; color: #fff; font-weight: bold; flex: 1;">キャンセル</button>
+        </div>
+    </div>
+</div>
+
+<!-- 起動時：サーバー選択・接続画面 -->
 <div id="boot-screen">
-    <h1 class="boot-title">ROB-DESTECH SYSTEM</h1>
-    <p class="boot-sub">Operation Tool</p>
-    <button class="boot-btn" onclick="startApp()">システム起動</button>
+    <div class="boot-card">
+        <h1 class="boot-title">ROB-DESTECH</h1>
+        <p class="boot-sub">Operation Tool</p>
+        
+        <label style="font-size:0.85em; text-align:left; display:block; margin-bottom: 2px;">接続するサーバーを選択:</label>
+        <select id="boot-server-select" style="background: #001122; color: #FFD700; font-weight: bold; margin-bottom: 6px;"></select>
+        
+        <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+            <button onclick="openNewServerModal()" style="background: #28a745; color: #fff; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; padding: 8px; flex: 1; font-size: 12px;">新規サーバー作成</button>
+            <button onclick="deleteCurrentServer()" style="background: #d9534f; color: #fff; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; padding: 8px; flex: 1; font-size: 12px;">サーバー削除</button>
+        </div>
+
+        <button class="boot-btn" onclick="startApp()" style="width: 100%; background: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; padding: 10px; font-size: 14px;">接続してシステム起動</button>
+    </div>
 </div>
 
 <div id="app">
@@ -431,13 +483,13 @@
         </div>
         <input type="hidden" id="role-select" value="driver">
 
-        <label style="font-size:0.8em; text-align:left; display:block; margin-top:4px;">鉄道ネットワーク（路線データ）選択:</label>
-        <select id="railway-network-select" onchange="changeRailwayNetwork()" style="margin: 2px 0; background: #002244; color: #FFD700; font-weight: bold;">
-            <option value="robutsu">尾羽急</option>
-            <option value="fictional_b">鴨原</option>
-            <option value="fictional_sumire">すみれヶ丘</option>
-            <option value="fictional_c">？？？ (C線)</option>
-        </select>
+<div class="ng-config-box" style="margin-top: 6px;">
+    <div style="font-weight: bold; margin-bottom: 2px; color: #FFD700;">⚙️ 指令室設定</div>
+    <div style="display: flex; gap: 4px;">
+        <input id="shirei-name-input" placeholder="指令の名前（例: 東京指令）" style="margin:0; padding:4px; font-size:11px; background:#0b1929; color:#fff; border:1px solid #444;">
+        <button onclick="saveShireiName()" style="background:#0073eb; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:auto; padding:4px 8px; font-size:11px;">名前変更</button>
+    </div>
+</div>
 
         <div id="train-input-container">
             <label style="font-size:0.8em; text-align:left; display:block;">担当列車番号 (自由入力可能):</label>
@@ -493,6 +545,18 @@
             <select id="active-trains-select"></select>
             <button onclick="removeSpecificAlert()">選択列車の個別解除</button>
             <button onclick="resetAlert()" style="background: #f00; color: #fff;">全解除</button>
+        </div>
+
+        <!-- 指令室内部の臨時ダイヤ送信ツール -->
+        <div id="shirei-inside-extra-tool" class="hidden" style="background: #15293d; border: 1px solid #FFD700; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px;">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #FFD700;">📢 指令室 臨時指令送信</div>
+            
+            <label style="font-size:0.8em; display:block;">配信先運番（まとめて選択・一括送信）:</label>
+            <select id="shirei-target-train-select" multiple style="width:100%; height:75px; margin:2px 0; font-size:11px; background:#0b1929; color:#fff;"></select>
+            <div style="font-size: 9px; color: #aaa; margin-bottom: 4px;">※ CtrlキーまたはShiftキーを押しながらクリックで複数選択できます</div>
+
+            <input id="shirei-extra-msg" placeholder="臨時指示（例: 〇〇駅にて〇分停車 etc）" style="width:100%; margin:2px 0; padding:4px; font-size:11px; background:#0b1929; color:#fff; border:1px solid #444;">
+            <button onclick="sendShireiExtraDiagram()" style="background:#d9534f; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:100%; padding:6px; margin-top:2px;">選択した列車へ臨時指令を一括送信</button>
         </div>
 
         <div id="driver-alert-tools" class="hidden" style="background: #0a141e; border: 1px solid #FFD700; padding: 8px; border-radius: 5px; margin-bottom: 6px; font-size: 12px;">
@@ -802,9 +866,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function changeRailwayNetwork() {
-        const selectEl = document.getElementById('railway-network-select');
-        currentNetworkKey = selectEl.value;
+    function applyNetworkSettings(netKey) {
+        currentNetworkKey = netKey;
         lines = railwayNetworks[currentNetworkKey].lines;
         trainTypeSettings = railwayNetworks[currentNetworkKey].trainTypeSettings;
         currentLineColors = railwayNetworks[currentNetworkKey].lineColors;
@@ -959,8 +1022,10 @@
     db.ref('online').on('value', (s) => {
         const shireiSelect = document.getElementById('active-trains-select');
         const msgTargetSelect = document.getElementById('msg-target-select');
+        const shireiTargetSelect = document.getElementById('shirei-target-train-select');
         
         if(shireiSelect) shireiSelect.innerHTML = '';
+        if(shireiTargetSelect) shireiTargetSelect.innerHTML = '';
         
         let currentMsgTargetVal = msgTargetSelect ? msgTargetSelect.value : "指令室";
         if(msgTargetSelect) {
@@ -970,9 +1035,17 @@
             `;
         }
 
+        let trainIdSet = new Set();
         s.forEach(c => {
             let trainId = c.key;
+            if(trainId !== 'SHIREI') {
+                trainIdSet.add(trainId);
+            }
+        });
+
+        trainIdSet.forEach(trainId => {
             if(shireiSelect) shireiSelect.add(new Option(trainId, trainId));
+            if(shireiTargetSelect) shireiTargetSelect.add(new Option(trainId, trainId));
             if(msgTargetSelect) {
                 msgTargetSelect.add(new Option(`${trainId} へ送信`, trainId));
             }
@@ -1108,19 +1181,6 @@
         document.getElementById('watch-modal').style.display = 'none';
     }
 
-    function endDuty() {
-        if (confirm("乗務終了処理を行いますか？")) {
-            if (currentTrainNum) {
-                db.ref('online/' + currentTrainNum).remove();
-                db.ref('operations/' + currentTrainNum).remove();
-            }
-            
-            setTimeout(() => {
-                location.reload();
-            }, 300);
-        }
-    }
-
     function initStations() {
         const selects = [
             document.getElementById('start-station-select'),
@@ -1173,10 +1233,26 @@
                 audio.play().then(() => {
                     audio.pause();
                     audio.currentTime = 0;
-                    audio.muted = false;
+                    // 【修正】ここでミュートを解除せず、そのままにするか、
+                    // もしくはアンロック完了後に明示的にミュート状態に保持することで、
+                    // 再起動時（ボタン押下時）の再生音を完全に消音（ミュート）できます。
+                    audio.muted = true; 
                 }).catch(e => {
                     console.log(`Audio unlock failed (${id}): `, e);
                 });
+            }
+        });
+
+        const bootServerSelect = document.getElementById('boot-server-select');
+        if (bootServerSelect) {
+            currentServerId = bootServerSelect.value;
+            localStorage.setItem("ServerManager_Current", currentServerId);
+        }
+
+        // サーバー固有の路線設定を読み込み適用
+        db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
+            if (snapshot.exists()) {
+                applyNetworkSettings(snapshot.val());
             }
         });
 
@@ -1285,12 +1361,12 @@
         const typeTextEl = document.getElementById('staf-train-type-text');
         const numTextEl = document.getElementById('staf-train-num-text');
         const countTextEl = document.getElementById('staf-car-count-text');
-        const destTextEl = document.getElementById('staf-dest-text'); // 行先要素
+        const destTextEl = document.getElementById('staf-dest-text');
 
         if (typeTextEl) typeTextEl.innerText = trainType;
         if (numTextEl) numTextEl.innerText = `第 ${trainNum} レ`;
         if (countTextEl) countTextEl.innerText = carCount;
-        if (destTextEl) destTextEl.innerText = `${endSt}行`; // 行先を反映
+        if (destTextEl) destTextEl.innerText = `${endSt}行`;
 
         applyTrainTypeClass(trainType);
 
@@ -1423,13 +1499,183 @@
         }, 200);
     }
 
+let currentServerId = "default";
+let currentShireiName = "指令室";
+
+function initServerManager() {
+    let savedServers = localStorage.getItem("ServerManager_Servers");
+    let servers = savedServers ? JSON.parse(savedServers) : { "default": "デフォルトサーバー" };
+    
+    const bootServerSelect = document.getElementById('boot-server-select');
+    if (bootServerSelect) {
+        bootServerSelect.innerHTML = "";
+        for (let sId in servers) {
+            bootServerSelect.add(new Option(servers[sId], sId));
+        }
+        bootServerSelect.value = currentServerId;
+        
+        bootServerSelect.onchange = function() {
+            currentServerId = this.value;
+            localStorage.setItem("ServerManager_Current", currentServerId);
+        };
+    }
+
+    let storedCurr = localStorage.getItem("ServerManager_Current");
+    if (storedCurr && servers[storedCurr]) {
+        currentServerId = storedCurr;
+        if(bootServerSelect) bootServerSelect.value = currentServerId;
+    }
+}
+
+function openNewServerModal() {
+    document.getElementById('new-server-modal').style.display = 'flex';
+    document.getElementById('new-server-name-input').value = '';
+}
+
+function closeNewServerModal() {
+    document.getElementById('new-server-modal').style.display = 'none';
+}
+
+function submitNewServer() {
+    let serverName = document.getElementById('new-server-name-input').value.trim();
+    if (!serverName) {
+        alert("サーバー名を入力してください");
+        return;
+    }
+    
+    let selectedNetKey = document.getElementById('new-server-railway-network-select').value;
+    let serverId = "server_" + Date.now();
+    let savedServers = localStorage.getItem("ServerManager_Servers");
+    let servers = savedServers ? JSON.parse(savedServers) : { "default": "デフォルトサーバー" };
+    
+    servers[serverId] = serverName;
+    localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
+    localStorage.setItem("ServerManager_Current", serverId);
+    
+    // サーバー毎の路線設定をFirebaseに保存
+    db.ref(`servers/${serverId}/networkKey`).set(selectedNetKey);
+
+    closeNewServerModal();
+    alert(`サーバー「${serverName}」を作成しました。`);
+    location.reload();
+}
+
+function deleteCurrentServer() {
+    let savedServers = localStorage.getItem("ServerManager_Servers");
+    let servers = savedServers ? JSON.parse(savedServers) : { "default": "デフォルトサーバー" };
+    
+    const bootServerSelect = document.getElementById('boot-server-select');
+    let targetId = bootServerSelect ? bootServerSelect.value : currentServerId;
+
+    if (Object.keys(servers).length <= 1) {
+        alert("最後のサーバーは削除できません。");
+        return;
+    }
+
+    if (confirm(`選択中のサーバー「${servers[targetId]}」を削除しますか？`)) {
+        delete servers[targetId];
+        localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
+        
+        let remainingIds = Object.keys(servers);
+        localStorage.setItem("ServerManager_Current", remainingIds[0]);
+        
+        db.ref(`servers/${targetId}`).remove();
+
+        alert("サーバーを削除しました。再読み込みします。");
+        location.reload();
+    }
+}
+
+initServerManager();
+
+function getServerDbRef(path) {
+    return db.ref(`servers/${currentServerId}/${path}`);
+}
+
+function saveShireiName() {
+    const nameInput = document.getElementById('shirei-name-input').value.trim();
+    if (!nameInput) {
+        alert("指令の名前を入力してください");
+        return;
+    }
+    currentShireiName = nameInput;
+    getServerDbRef('shirei_name').set(nameInput).then(() => {
+        alert(`指令の名前を「 ${currentShireiName} 」に変更しました`);
+    });
+}
+
+getServerDbRef('shirei_name').on('value', (snapshot) => {
+    if (snapshot.exists()) {
+        currentShireiName = snapshot.val();
+        const inputEl = document.getElementById('shirei-name-input');
+        if (inputEl && document.activeElement !== inputEl) {
+            inputEl.value = currentShireiName;
+        }
+    }
+});
+
+function sendShireiExtraDiagram() {
+    const selectEl = document.getElementById('shirei-target-train-select');
+    const selectedOptions = Array.from(selectEl.selectedOptions).map(opt => opt.value);
+    const msg = document.getElementById('shirei-extra-msg').value.trim();
+
+    if (selectedOptions.length === 0) {
+        alert("配信対象の運番（列番）を1つ以上選択してください");
+        return;
+    }
+
+    selectedOptions.forEach(trainId => {
+        let payload = {
+            message: msg || "臨時指令が配信されました",
+            timestamp: Date.now()
+        };
+
+        getServerDbRef('extra_diagram/' + trainId).set(payload);
+    });
+
+    alert(`選択された ${selectedOptions.length} 件の列車へ臨時指令を一括送信しました。`);
+    document.getElementById('shirei-extra-msg').value = "";
+}
+
+function listenExtraDiagramForDriver(trainNum) {
+    getServerDbRef('extra_diagram/' + trainNum).on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const timeStr = new Date(data.timestamp).toLocaleTimeString();
+            const logEl = document.getElementById('comms-log');
+            if (logEl) {
+                logEl.innerHTML += `<br><span style="color: #ff9900;">[${timeStr}] 📢 臨時指令: ${data.message}</span>`;
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+            
+            alert(`【臨時指令】\n${data.message}`);
+        }
+    });
+}
+
+function endDuty() {
+    let confirmMsg = userRole === 'shirei' ? "指令室を終了しますか？" : "乗務終了処理を行いますか？";
+    if (confirm(confirmMsg)) {
+        if (userRole === 'shirei') {
+            getServerDbRef('online/SHIREI').remove();
+        } else if (currentTrainNum) {
+            getServerDbRef('online/' + currentTrainNum).remove();
+            getServerDbRef('operations/' + currentTrainNum).remove();
+        }
+        
+        setTimeout(() => {
+            location.reload();
+        }, 300);
+    }
+}
+
     window.selectStation = function(idx, stationName, actionText) {
         if (userRole === 'conductor') return;
         currentStationIndex = idx;
         renderStafPage();
         
         if (currentTrainNum) {
-            db.ref('operations/' + currentTrainNum).update({
+            getServerDbRef('operations/' + currentTrainNum).update({
                 currentStationIndex: idx,
                 currentStationName: stationName,
                 actionText: actionText,
@@ -1488,7 +1734,7 @@
         stafArea.classList.remove('show');
         generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
         
-        db.ref('operations/' + myTrain).update({
+        getServerDbRef('operations/' + myTrain).update({
             trainType: trainType,
             carCount: carCount,
             startSt: startSt,
@@ -1516,18 +1762,20 @@
 
         if (role === 'shirei') {
             document.getElementById('shirei-tools').classList.remove('hidden');
+            document.getElementById('shirei-inside-extra-tool').classList.remove('hidden');
             document.getElementById('driver-alert-tools').classList.add('hidden');
             document.getElementById('staf-area').classList.add('hidden');
             document.getElementById('driver-reselect-area').classList.add('hidden');
         } else {
             document.getElementById('shirei-tools').classList.add('hidden');
+            document.getElementById('shirei-inside-extra-tool').classList.add('hidden');
             if (role === 'driver' || role === 'conductor') {
                 document.getElementById('driver-alert-tools').classList.remove('hidden');
             } else {
                 document.getElementById('driver-alert-tools').classList.add('hidden');
             }
 
-            db.ref('operations/' + myTrain).once('value', (snapshot) => {
+            getServerDbRef('operations/' + myTrain).once('value', (snapshot) => {
                 const opData = snapshot.val();
                 let trainType = Object.keys(trainTypeSettings)[0];
                 let carCount = "4両";
@@ -1558,7 +1806,7 @@
                         document.getElementById('via3-station').value
                     ];
 
-                    db.ref('operations/' + myTrain).set({
+                    getServerDbRef('operations/' + myTrain).set({
                         trainType: trainType,
                         carCount: carCount,
                         startSt: startSt,
@@ -1589,7 +1837,7 @@
                 stafArea.classList.remove('hidden');
                 setTimeout(() => { stafArea.classList.add('show'); }, 50);
 
-                db.ref('operations/' + myTrain).on('value', (s) => {
+                getServerDbRef('operations/' + myTrain).on('value', (s) => {
                     const val = s.val();
                     if (!val) return;
                     if (val.currentStationIndex !== undefined && val.currentStationIndex !== currentStationIndex) {
@@ -1599,11 +1847,13 @@
                 });
             });
 
-            const onlineRef = db.ref('online/' + myTrain);
+            listenExtraDiagramForDriver(myTrain);
+
+            const onlineRef = getServerDbRef('online/' + myTrain);
             onlineRef.set(true);
             onlineRef.onDisconnect().remove();
 
-            const operationsRef = db.ref('operations/' + myTrain);
+            const operationsRef = getServerDbRef('operations/' + myTrain);
             operationsRef.onDisconnect().remove();
         }
     };
