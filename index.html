@@ -1090,7 +1090,7 @@
         }
 
         let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
-        let displayTarget = target === 'ALL' ? '【全列車一斉】' : `【${target}】`;
+        let displayTarget = target === 'ALL' ? '【全列車一斉】' : (target === '指令室' ? '【指令室】' : `【${target}】`);
 
         getServerDbRef('comms').push({
             sender: `${senderName} -> ${displayTarget}`,
@@ -1509,8 +1509,20 @@ function initServerManager() {
             currentServerId = this.value;
             localStorage.setItem("ServerManager_Current", currentServerId);
             updateShareUrlInput();
+            
+            // サーバー切替時に対応するネットワーク設定を即座に反映
+            db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
+                const netKey = snapshot.val() || "robutsu";
+                applyNetworkSettings(netKey);
+            });
         };
     }
+
+    // 初期化時にもネットワークキーを同期
+    db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
+        const netKey = snapshot.val() || "robutsu";
+        applyNetworkSettings(netKey);
+    });
 
     updateShareUrlInput();
 }
@@ -1732,6 +1744,10 @@ function endDuty() {
             document.getElementById('driver-alert-tools').classList.add('hidden');
             document.getElementById('staf-area').classList.add('hidden');
             document.getElementById('driver-reselect-area').classList.add('hidden');
+
+            const shireiOnlineRef = getServerDbRef('online/SHIREI');
+            shireiOnlineRef.set(true);
+            shireiOnlineRef.onDisconnect().remove();
         } else {
             document.getElementById('shirei-tools').classList.add('hidden');
             document.getElementById('shirei-inside-extra-tool').classList.add('hidden');
