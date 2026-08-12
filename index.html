@@ -434,7 +434,7 @@
     <button class="watch-close-btn" onclick="closeWatchModal()">閉じる</button>
 </div>
 
-<!-- 新規サーバー作成用モーダルUI（路線設定ボタンを追加） -->
+<!-- 新規サーバー作成用モーダルUI -->
 <div id="new-server-modal">
     <div class="modal-content">
         <h3 style="margin-top: 0; color: #FFD700;">新規サーバー作成</h3>
@@ -469,7 +469,6 @@
             <button onclick="deleteCurrentServer()" style="background: #d9534f; color: #fff; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; padding: 8px; flex: 1; font-size: 12px;">サーバー削除</button>
         </div>
 
-        <!-- 【配置変更】サーバー共有用URL欄を「接続してシステム起動」ボタンの上へ移動 -->
         <div style="background: #001122; border: 1px solid #FFD700; border-radius: 5px; padding: 6px; margin-bottom: 10px; text-align: left;">
             <label style="font-size: 0.75em; display: block; color: #FFD700; margin-bottom: 2px;">🔗 現在のサーバー共有URL:</label>
             <div style="display: flex; gap: 4px;">
@@ -478,7 +477,6 @@
             </div>
         </div>
 
-        <!-- 接続してシステム起動ボタン -->
         <button class="boot-btn" onclick="startApp()" style="width: 100%; background: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; padding: 10px; font-size: 14px;">接続してシステム起動</button>
     </div>
 </div>
@@ -557,7 +555,6 @@
             <button onclick="resetAlert()" style="background: #f00; color: #fff;">全解除</button>
         </div>
 
-        <!-- 指令室内部の臨時ダイヤ送信ツール -->
         <div id="shirei-inside-extra-tool" class="hidden" style="background: #15293d; border: 1px solid #FFD700; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px;">
             <div style="font-weight: bold; margin-bottom: 4px; color: #FFD700;">📢 指令室 臨時指令送信</div>
             
@@ -654,7 +651,6 @@
                         <div>定時運行を遵守</div>
                     </div>
                     <div class="nankai-train-info-area">
-                        <!-- 行先表示要素を追加 -->
                         <div id="staf-type-banner" class="nankai-type-banner">
                             <span class="nankai-direction">下り</span>
                             <span id="staf-train-type-text">各駅停車</span>
@@ -803,7 +799,6 @@
                 "試運転(SUタイプ)": { stopRule: ["すみれヶ丘", "風間工業団地", "雨ヶ瀬", "咲原医大", "南涼花", "鳴海"], bg: "#ffffff", color: "#ff0000" },
                 "回送": { stopRule: "ALL", bg: "#ffffff", color: "#ff0000" },
                 "試運転": { stopRule: "ALL", bg: "#ffffff", color: "#ff0000" }
-
             }
         },
         fictional_c: {
@@ -876,7 +871,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let currentServerId = "default";
+    let currentShireiName = "指令室";
+
+    function getServerDbRef(path) {
+        return db.ref(`servers/${currentServerId}/${path}`);
+    }
+
     function applyNetworkSettings(netKey) {
+        if (!railwayNetworks[netKey]) netKey = "robutsu";
         currentNetworkKey = netKey;
         lines = railwayNetworks[currentNetworkKey].lines;
         trainTypeSettings = railwayNetworks[currentNetworkKey].trainTypeSettings;
@@ -889,7 +892,8 @@
     
     updateTrainTypeSelects();
 
-    db.ref('settings/ngWords').on('value', (snapshot) => {
+    // サーバーごとのNGワード
+    getServerDbRef('settings/ngWords').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
             ngWordsList = val.split(',').map(w => w.trim()).filter(w => w.length > 0);
@@ -904,17 +908,18 @@
 
     function saveNgWords() {
         const val = document.getElementById('ng-words-input').value.trim();
-        db.ref('settings/ngWords').set(val).then(() => {
+        getServerDbRef('settings/ngWords').set(val).then(() => {
             alert("NGワード設定を更新しました");
         }).catch(e => {
             alert("保存に失敗しました: " + e);
         });
     }
 
-    db.ref('alert').on('child_added', (snapshot) => {
+    // サーバーごとの防護無線リスナー
+    getServerDbRef('alert').on('child_added', (snapshot) => {
         handleAlertAudio(snapshot.val());
     });
-    db.ref('alert').on('child_changed', (snapshot) => {
+    getServerDbRef('alert').on('child_changed', (snapshot) => {
         handleAlertAudio(snapshot.val());
     });
 
@@ -925,39 +930,28 @@
         const clearAudio = document.getElementById('alert-clear-audio');
 
         if (data.type === 'ALL' || data.type === 'SPECIFIC') {
-            if (clearAudio) {
-                clearAudio.pause();
-                clearAudio.currentTime = 0;
-            }
+            if (clearAudio) { clearAudio.pause(); clearAudio.currentTime = 0; }
             if (alertAudio) {
                 alertAudio.currentTime = 0;
-                alertAudio.play().catch(e => {
-                    console.log("防護無線音声の自動再生がブロックされました: ", e);
-                });
+                alertAudio.play().catch(e => { console.log("防護無線音声の自動再生ブロック: ", e); });
             }
         } else if (data.type === 'CLEARED') {
-            if (alertAudio) {
-                alertAudio.pause();
-                alertAudio.currentTime = 0;
-            }
+            if (alertAudio) { alertAudio.pause(); alertAudio.currentTime = 0; }
             if (clearAudio) {
                 clearAudio.currentTime = 0;
-                clearAudio.play().catch(e => {
-                    console.log("防護解除音声の自動再生がブロックされました: ", e);
-                });
+                clearAudio.play().catch(e => { console.log("防護解除音声の自動再生ブロック: ", e); });
             }
         }
     }
 
-    db.ref('call_signal').on('value', (snapshot) => {
+    // サーバーごとの呼出音リスナー
+    getServerDbRef('call_signal').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.timestamp) {
             const audio = document.getElementById('call-audio');
             if (audio) {
                 audio.currentTime = 0;
-                audio.play().catch(e => {
-                    console.log("音声の自動再生がブロックされました: ", e);
-                });
+                audio.play().catch(e => { console.log("音声自動再生ブロック: ", e); });
             }
 
             const logEl = document.getElementById('comms-log');
@@ -971,13 +965,14 @@
 
     function triggerCall() {
         let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
-        db.ref('call_signal').set({
+        getServerDbRef('call_signal').set({
             sender: senderName,
             timestamp: Date.now()
         });
     }
 
-    db.ref('comms').on('value', (snapshot) => {
+    // サーバーごとの通信ログリスナー
+    getServerDbRef('comms').on('value', (snapshot) => {
         const logEl = document.getElementById('comms-log');
         if (!logEl) return;
         
@@ -988,9 +983,9 @@
 
         let logsHtml = '';
         snapshot.forEach((childSnap) => {
-            const data = childSnap.val();
+            let data = childSnap.val();
             if (data) {
-                const timeStr = new Date(data.timestamp).toLocaleTimeString();
+                let timeStr = new Date(data.timestamp).toLocaleTimeString();
                 logsHtml += `[${timeStr}] ${data.sender}: ${data.message}<br>`;
             }
         });
@@ -998,29 +993,9 @@
         logEl.scrollTop = logEl.scrollHeight;
     });
 
-    let lastCommsKey = null;
-    let isInitialCommsLoad = true;
-    db.ref('comms').on('child_added', (snapshot) => {
-        const data = snapshot.val();
-        const key = snapshot.key;
-        
-        if (isInitialCommsLoad) {
-            lastCommsKey = key;
-            return;
-        }
-
-        if (data && key !== lastCommsKey) {
-            lastCommsKey = key;
-        }
-    });
-
-    db.ref('comms').once('value', () => {
-        isInitialCommsLoad = false;
-    });
-
     function resetCommsHistory() {
         if (confirm("交信履歴をすべてリセットしますか？")) {
-            db.ref('comms').remove().then(() => {
+            getServerDbRef('comms').remove().then(() => {
                 const logEl = document.getElementById('comms-log');
                 if (logEl) logEl.innerHTML = '通信ログ待機中...';
             }).catch(e => {
@@ -1029,7 +1004,8 @@
         }
     }
 
-    db.ref('online').on('value', (s) => {
+    // オンライン列車一覧
+    getServerDbRef('online').on('value', (s) => {
         const shireiSelect = document.getElementById('active-trains-select');
         const msgTargetSelect = document.getElementById('msg-target-select');
         const shireiTargetSelect = document.getElementById('shirei-target-train-select');
@@ -1068,17 +1044,14 @@
 
     function sendAlert(type) {
         if (userRole === 'driver' || userRole === 'conductor') {
-            db.ref('alert/ALL').set({ type: 'ALL', timestamp: Date.now() });
+            getServerDbRef('alert/ALL').set({ type: 'ALL', timestamp: Date.now() });
         } else {
             const target = document.getElementById('target-train-input').value.trim();
             if (type === 'ALL') {
-                db.ref('alert/ALL').set({ type: 'ALL', timestamp: Date.now() });
+                getServerDbRef('alert/ALL').set({ type: 'ALL', timestamp: Date.now() });
             } else {
-                if (!target) {
-                    alert("対象列車を入力してください");
-                    return;
-                }
-                db.ref('alert/' + target).set({ type: 'SPECIFIC', timestamp: Date.now() });
+                if (!target) { alert("対象列車を入力してください"); return; }
+                getServerDbRef('alert/' + target).set({ type: 'SPECIFIC', timestamp: Date.now() });
             }
         }
     }
@@ -1086,21 +1059,18 @@
     function removeSpecificAlert() {
         const select = document.getElementById('active-trains-select');
         const target = select.value || document.getElementById('target-train-input').value.trim();
-        if (!target) {
-            alert("解除する列車を選択または入力してください");
-            return;
-        }
-        db.ref('alert/' + target).set({ type: 'CLEARED', timestamp: Date.now() });
+        if (!target) { alert("解除する列車を選択または入力してください"); return; }
+        getServerDbRef('alert/' + target).set({ type: 'CLEARED', timestamp: Date.now() });
     }
 
     function driverClearAlert() {
         if (!currentTrainNum) return;
-        db.ref('alert/' + currentTrainNum).set({ type: 'CLEARED', timestamp: Date.now() });
-        db.ref('alert/ALL').set({ type: 'CLEARED', timestamp: Date.now() });
+        getServerDbRef('alert/' + currentTrainNum).set({ type: 'CLEARED', timestamp: Date.now() });
+        getServerDbRef('alert/ALL').set({ type: 'CLEARED', timestamp: Date.now() });
     }
 
     function resetAlert() {
-        db.ref('alert').set({
+        getServerDbRef('alert').set({
             ALL: { type: 'CLEARED', timestamp: Date.now() }
         });
     }
@@ -1110,10 +1080,7 @@
         const msgInput = document.getElementById('general-custom-msg');
         let msg = msgInput.value.trim();
 
-        if (!msg) {
-            alert("メッセージを入力してください");
-            return;
-        }
+        if (!msg) { alert("メッセージを入力してください"); return; }
 
         for (let word of ngWordsList) {
             if (word && msg.includes(word)) {
@@ -1125,7 +1092,7 @@
         let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
         let displayTarget = target === 'ALL' ? '【全列車一斉】' : `【${target}】`;
 
-        db.ref('comms').push({
+        getServerDbRef('comms').push({
             sender: `${senderName} -> ${displayTarget}`,
             message: msg,
             timestamp: Date.now()
@@ -1184,12 +1151,8 @@
         }
     }, 50);
 
-    function openWatchModal() {
-        document.getElementById('watch-modal').style.display = 'flex';
-    }
-    function closeWatchModal() {
-        document.getElementById('watch-modal').style.display = 'none';
-    }
+    function openWatchModal() { document.getElementById('watch-modal').style.display = 'flex'; }
+    function closeWatchModal() { document.getElementById('watch-modal').style.display = 'none'; }
 
     function initStations() {
         const selects = [
@@ -1226,15 +1189,12 @@
 
         const endSel = document.getElementById('end-station-select');
         const reEndSel = document.getElementById('re-end-station');
-        if (endSel && endSel.options.length > 1) {
-            endSel.selectedIndex = 1;
-        }
-        if (reEndSel && reEndSel.options.length > 1) {
-            reEndSel.selectedIndex = 1;
-        }
+        if (endSel && endSel.options.length > 1) endSel.selectedIndex = 1;
+        if (reEndSel && reEndSel.options.length > 1) reEndSel.selectedIndex = 1;
     }
     initStations();
 
+    // 起動処理（サーバー読み込み・適用）
     function startApp() {
         ['call-audio', 'alert-audio', 'alert-clear-audio'].forEach(id => {
             const audio = document.getElementById(id);
@@ -1244,9 +1204,7 @@
                     audio.pause();
                     audio.currentTime = 0;
                     audio.muted = true; 
-                }).catch(e => {
-                    console.log(`Audio unlock failed (${id}): `, e);
-                });
+                }).catch(e => { console.log(`Audio unlock failed (${id}): `, e); });
             }
         });
 
@@ -1256,16 +1214,15 @@
             localStorage.setItem("ServerManager_Current", currentServerId);
         }
 
-        // サーバー固有の路線設定を読み込み適用
+        // サーバー固有の路線設定を完全に読み込んでから画面を表示する
         db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
-            if (snapshot.exists()) {
-                applyNetworkSettings(snapshot.val());
-            }
-        });
+            const netKey = snapshot.val() || "robutsu";
+            applyNetworkSettings(netKey);
 
-        const boot = document.getElementById('boot-screen');
-        boot.style.opacity = '0';
-        setTimeout(() => { boot.style.display = 'none'; }, 800);
+            const boot = document.getElementById('boot-screen');
+            boot.style.opacity = '0';
+            setTimeout(() => { boot.style.display = 'none'; }, 800);
+        });
     }
 
     function getSegmentStations(fromSt, toSt) {
@@ -1327,9 +1284,7 @@
 
         for (let i = 0; i < waypoints.length - 1; i++) {
             let subPath = getSegmentStations(waypoints[i], waypoints[i+1]);
-            if (i > 0) {
-                subPath.shift();
-            }
+            if (i > 0) subPath.shift();
             fullRoute.push(...subPath);
         }
 
@@ -1393,9 +1348,7 @@
 
             if (index !== 0 && index !== stationList.length - 1) {
                 if (stopRule && stopRule !== "ALL" && Array.isArray(stopRule)) {
-                    if (!stopRule.includes(stName)) {
-                        isPass = true;
-                    }
+                    if (!stopRule.includes(stName)) isPass = true;
                 }
             }
 
@@ -1451,7 +1404,6 @@
                         if (isCurrent) rowClass += ' current-station-row';
 
                         let shortName = item.name.length > 8 ? item.name.substring(0, 8) : item.name;
-                        
                         let cellStyle = '';
                         let actionClass = '';
                         
@@ -1473,10 +1425,7 @@
                             }
                         }
 
-                        let cellCodeText = 'テ';
-                        if (isPass) {
-                            cellCodeText = 'レ';
-                        }
+                        let cellCodeText = isPass ? 'レ' : 'テ';
 
                         html += `
                             <div class="nankai-row ${rowClass}" onclick="selectStation(${globalIdx}, '${item.name}', '${item.action}')">
@@ -1505,9 +1454,6 @@
             wrapper.classList.add('fade-in');
         }, 200);
     }
-
-let currentServerId = "default";
-let currentShireiName = "指令室";
 
 function updateShareUrlInput() {
     const shareInput = document.getElementById('server-share-url-input');
@@ -1580,10 +1526,7 @@ function closeNewServerModal() {
 
 function submitNewServer() {
     let serverName = document.getElementById('new-server-name-input').value.trim();
-    if (!serverName) {
-        alert("サーバー名を入力してください");
-        return;
-    }
+    if (!serverName) { alert("サーバー名を入力してください"); return; }
     
     let selectedNetKey = document.getElementById('new-server-railway-network-select').value;
     let serverId = "server_" + Date.now();
@@ -1598,7 +1541,7 @@ function submitNewServer() {
 
     closeNewServerModal();
     alert(`サーバー「${serverName}」を作成しました。`);
-    location.reload();
+    location.href = window.location.origin + window.location.pathname + "?server=" + serverId;
 }
 
 function deleteCurrentServer() {
@@ -1608,12 +1551,9 @@ function deleteCurrentServer() {
     const bootServerSelect = document.getElementById('boot-server-select');
     let targetId = bootServerSelect ? bootServerSelect.value : currentServerId;
 
-    if (Object.keys(servers).length <= 1) {
-        alert("最後のサーバーは削除できません。");
-        return;
-    }
+    if (Object.keys(servers).length <= 1) { alert("最後のサーバーは削除できません。"); return; }
 
-    if (confirm(`選択中のサーバー「${servers[targetId]}」を削除しますか？`)) {
+    if (confirm(`選択中のサーバーを削除しますか？`)) {
         delete servers[targetId];
         localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
         
@@ -1623,22 +1563,15 @@ function deleteCurrentServer() {
         db.ref(`servers/${targetId}`).remove();
 
         alert("サーバーを削除しました。再読み込みします。");
-        location.reload();
+        location.href = window.location.origin + window.location.pathname;
     }
 }
 
 initServerManager();
 
-function getServerDbRef(path) {
-    return db.ref(`servers/${currentServerId}/${path}`);
-}
-
 function saveShireiName() {
     const nameInput = document.getElementById('shirei-name-input').value.trim();
-    if (!nameInput) {
-        alert("指令の名前を入力してください");
-        return;
-    }
+    if (!nameInput) { alert("指令の名前を入力してください"); return; }
     currentShireiName = nameInput;
     getServerDbRef('shirei_name').set(nameInput).then(() => {
         alert(`指令の名前を「 ${currentShireiName} 」に変更しました`);
@@ -1660,17 +1593,13 @@ function sendShireiExtraDiagram() {
     const selectedOptions = Array.from(selectEl.selectedOptions).map(opt => opt.value);
     const msg = document.getElementById('shirei-extra-msg').value.trim();
 
-    if (selectedOptions.length === 0) {
-        alert("配信対象の運番（列番）を1つ以上選択してください");
-        return;
-    }
+    if (selectedOptions.length === 0) { alert("配信対象の運番を1つ以上選択してください"); return; }
 
     selectedOptions.forEach(trainId => {
         let payload = {
             message: msg || "臨時指令が配信されました",
             timestamp: Date.now()
         };
-
         getServerDbRef('extra_diagram/' + trainId).set(payload);
     });
 
@@ -1688,7 +1617,6 @@ function listenExtraDiagramForDriver(trainNum) {
                 logEl.innerHTML += `<br><span style="color: #ff9900;">[${timeStr}] 📢 臨時指令: ${data.message}</span>`;
                 logEl.scrollTop = logEl.scrollHeight;
             }
-            
             alert(`【臨時指令】\n${data.message}`);
         }
     });
@@ -1703,10 +1631,7 @@ function endDuty() {
             getServerDbRef('online/' + currentTrainNum).remove();
             getServerDbRef('operations/' + currentTrainNum).remove();
         }
-        
-        setTimeout(() => {
-            location.reload();
-        }, 300);
+        setTimeout(() => { location.reload(); }, 300);
     }
 }
 
