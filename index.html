@@ -892,19 +892,121 @@
     
     updateTrainTypeSelects();
 
-    // サーバーごとのNGワード
-    getServerDbRef('settings/ngWords').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (val) {
-            ngWordsList = val.split(',').map(w => w.trim()).filter(w => w.length > 0);
-            const inputEl = document.getElementById('ng-words-input');
-            if (inputEl && document.activeElement !== inputEl) {
-                inputEl.value = val;
-            }
-        } else {
-            ngWordsList = ["うんこ", "うんち"];
+    // サーバーごとのデータリスナーをセットアップする関数
+    let activeListeners = [];
+    function setupServerListeners() {
+        activeListeners.forEach(item => {
+            item.ref.off(item.eventType, item.callback);
+        });
+        activeListeners = [];
+
+        function addListener(ref, eventType, callback) {
+            ref.on(eventType, callback);
+            activeListeners.push({ ref, eventType, callback });
         }
-    });
+
+        addListener(getServerDbRef('settings/ngWords'), 'value', (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                ngWordsList = val.split(',').map(w => w.trim()).filter(w => w.length > 0);
+                const inputEl = document.getElementById('ng-words-input');
+                if (inputEl && document.activeElement !== inputEl) {
+                    inputEl.value = val;
+                }
+            } else {
+                ngWordsList = ["うんこ", "うんち"];
+            }
+        });
+
+        addListener(getServerDbRef('alert'), 'child_added', (snapshot) => { handleAlertAudio(snapshot.val()); });
+        addListener(getServerDbRef('alert'), 'child_changed', (snapshot) => { handleAlertAudio(snapshot.val()); });
+
+        addListener(getServerDbRef('call_signal'), 'value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.timestamp) {
+                const audio = document.getElementById('call-audio');
+                if (audio) {
+                    audio.currentTime = 0;
+                    audio.play().catch(e => { console.log("音声自動再生ブロック: ", e); });
+                }
+
+                const logEl = document.getElementById('comms-log');
+                if (logEl) {
+                    const timeStr = new Date(data.timestamp).toLocaleTimeString();
+                    logEl.innerHTML += `<br>[${timeStr}] 🔔 ${data.sender} から呼び出し音が鳴りました`;
+                    logEl.scrollTop = logEl.scrollHeight;
+                }
+            }
+        });
+
+        addListener(getServerDbRef('comms'), 'value', (snapshot) => {
+            const logEl = document.getElementById('comms-log');
+            if (!logEl) return;
+            
+            if (!snapshot.exists()) {
+                logEl.innerHTML = '通信ログ待機中...';
+                return;
+            }
+
+            let logsHtml = '';
+            snapshot.forEach((childSnap) => {
+                let data = childSnap.val();
+                if (data) {
+                    let timeStr = new Date(data.timestamp).toLocaleTimeString();
+                    logsHtml += `[${timeStr}] ${data.sender}: ${data.message}<br>`;
+                }
+            });
+            logEl.innerHTML = logsHtml;
+            logEl.scrollTop = logEl.scrollHeight;
+        });
+
+        addListener(getServerDbRef('online'), 'value', (s) => {
+            const shireiSelect = document.getElementById('active-trains-select');
+            const msgTargetSelect = document.getElementById('msg-target-select');
+            const shireiTargetSelect = document.getElementById('shirei-target-train-select');
+            
+            if(shireiSelect) shireiSelect.innerHTML = '';
+            if(shireiTargetSelect) shireiTargetSelect.innerHTML = '';
+            
+            let currentMsgTargetVal = msgTargetSelect ? msgTargetSelect.value : "指令室";
+            if(msgTargetSelect) {
+                msgTargetSelect.innerHTML = `
+                    <option value="指令室">指令室へ送信</option>
+                    <option value="ALL">全列車・指令へ一斉送信</option>
+                `;
+            }
+
+            let trainIdSet = new Set();
+            s.forEach(c => {
+                let trainId = c.key;
+                if(trainId !== 'SHIREI') {
+                    trainIdSet.add(trainId);
+                }
+            });
+
+            trainIdSet.forEach(trainId => {
+                if(shireiSelect) shireiSelect.add(new Option(trainId, trainId));
+                if(shireiTargetSelect) shireiTargetSelect.add(new Option(trainId, trainId));
+                if(msgTargetSelect) {
+                    msgTargetSelect.add(new Option(`${trainId} へ送信`, trainId));
+                }
+            });
+
+            if(msgTargetSelect) {
+                msgTargetSelect.value = currentMsgTargetVal;
+            }
+        });
+
+        addListener(getServerDbRef('shirei_name'), 'value', (snapshot) => {
+            if (snapshot.exists()) {
+                currentShireiName = snapshot.val();
+                const inputEl = document.getElementById('shirei-name-input');
+                if (inputEl && document.activeElement !== inputEl) {
+                    inputEl.value = currentShireiName;
+                }
+            }
+        });
+    }
 
     function saveNgWords() {
         const val = document.getElementById('ng-words-input').value.trim();
@@ -914,14 +1016,6 @@
             alert("保存に失敗しました: " + e);
         });
     }
-
-    // サーバーごとの防護無線リスナー
-    getServerDbRef('alert').on('child_added', (snapshot) => {
-        handleAlertAudio(snapshot.val());
-    });
-    getServerDbRef('alert').on('child_changed', (snapshot) => {
-        handleAlertAudio(snapshot.val());
-    });
 
     function handleAlertAudio(data) {
         if (!data || !data.type) return;
@@ -944,25 +1038,6 @@
         }
     }
 
-    // サーバーごとの呼出音リスナー
-    getServerDbRef('call_signal').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.timestamp) {
-            const audio = document.getElementById('call-audio');
-            if (audio) {
-                audio.currentTime = 0;
-                audio.play().catch(e => { console.log("音声自動再生ブロック: ", e); });
-            }
-
-            const logEl = document.getElementById('comms-log');
-            if (logEl) {
-                const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                logEl.innerHTML += `<br>[${timeStr}] 🔔 ${data.sender} から呼び出し音が鳴りました`;
-                logEl.scrollTop = logEl.scrollHeight;
-            }
-        }
-    });
-
     function triggerCall() {
         let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
         getServerDbRef('call_signal').set({
@@ -970,28 +1045,6 @@
             timestamp: Date.now()
         });
     }
-
-    // サーバーごとの通信ログリスナー
-    getServerDbRef('comms').on('value', (snapshot) => {
-        const logEl = document.getElementById('comms-log');
-        if (!logEl) return;
-        
-        if (!snapshot.exists()) {
-            logEl.innerHTML = '通信ログ待機中...';
-            return;
-        }
-
-        let logsHtml = '';
-        snapshot.forEach((childSnap) => {
-            let data = childSnap.val();
-            if (data) {
-                let timeStr = new Date(data.timestamp).toLocaleTimeString();
-                logsHtml += `[${timeStr}] ${data.sender}: ${data.message}<br>`;
-            }
-        });
-        logEl.innerHTML = logsHtml;
-        logEl.scrollTop = logEl.scrollHeight;
-    });
 
     function resetCommsHistory() {
         if (confirm("交信履歴をすべてリセットしますか？")) {
@@ -1003,44 +1056,6 @@
             });
         }
     }
-
-    // オンライン列車一覧
-    getServerDbRef('online').on('value', (s) => {
-        const shireiSelect = document.getElementById('active-trains-select');
-        const msgTargetSelect = document.getElementById('msg-target-select');
-        const shireiTargetSelect = document.getElementById('shirei-target-train-select');
-        
-        if(shireiSelect) shireiSelect.innerHTML = '';
-        if(shireiTargetSelect) shireiTargetSelect.innerHTML = '';
-        
-        let currentMsgTargetVal = msgTargetSelect ? msgTargetSelect.value : "指令室";
-        if(msgTargetSelect) {
-            msgTargetSelect.innerHTML = `
-                <option value="指令室">指令室へ送信</option>
-                <option value="ALL">全列車・指令へ一斉送信</option>
-            `;
-        }
-
-        let trainIdSet = new Set();
-        s.forEach(c => {
-            let trainId = c.key;
-            if(trainId !== 'SHIREI') {
-                trainIdSet.add(trainId);
-            }
-        });
-
-        trainIdSet.forEach(trainId => {
-            if(shireiSelect) shireiSelect.add(new Option(trainId, trainId));
-            if(shireiTargetSelect) shireiTargetSelect.add(new Option(trainId, trainId));
-            if(msgTargetSelect) {
-                msgTargetSelect.add(new Option(`${trainId} へ送信`, trainId));
-            }
-        });
-
-        if(msgTargetSelect) {
-            msgTargetSelect.value = currentMsgTargetVal;
-        }
-    });
 
     function sendAlert(type) {
         if (userRole === 'driver' || userRole === 'conductor') {
@@ -1194,7 +1209,6 @@
     }
     initStations();
 
-    // 起動処理（サーバー読み込み・適用）
     function startApp() {
         ['call-audio', 'alert-audio', 'alert-clear-audio'].forEach(id => {
             const audio = document.getElementById(id);
@@ -1214,10 +1228,10 @@
             localStorage.setItem("ServerManager_Current", currentServerId);
         }
 
-        // サーバー固有の路線設定を完全に読み込んでから画面を表示する
         db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
             const netKey = snapshot.val() || "robutsu";
             applyNetworkSettings(netKey);
+            setupServerListeners();
 
             const boot = document.getElementById('boot-screen');
             boot.style.opacity = '0';
@@ -1476,6 +1490,7 @@ function copyServerShareUrl() {
     }
 }
 
+// 【変更・修正】Firebaseの /servers 情報を基に、他の人が作成・設定したサーバーも含めて名前を動的に反映させる初期化関数
 function initServerManager() {
     const urlParams = new URLSearchParams(window.location.search);
     const urlServerParam = urlParams.get('server');
@@ -1486,42 +1501,67 @@ function initServerManager() {
     if (urlServerParam) {
         currentServerId = urlServerParam;
         localStorage.setItem("ServerManager_Current", currentServerId);
-        if (!servers[currentServerId]) {
-            servers[currentServerId] = "共有サーバー (" + currentServerId.substring(0, 8) + ")";
-            localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
-        }
     } else {
         let storedCurr = localStorage.getItem("ServerManager_Current");
-        if (storedCurr && servers[storedCurr]) {
+        if (storedCurr) {
             currentServerId = storedCurr;
         }
     }
-    
+
+    // Firebaseの /servers からサーバー情報を監視し、サーバー名（nameプロパティ等）を反映させる
+    db.ref('servers').on('value', (snapshot) => {
+        let remoteServers = snapshot.val();
+        let mergedServers = { ...servers };
+
+        if (remoteServers) {
+            for (let sId in remoteServers) {
+                // Firebase上に保存されているサーバー名があればそれを使い、なければデフォルトのフォールバック名を設定
+                let remoteName = remoteServers[sId].name;
+                if (remoteName) {
+                    mergedServers[sId] = remoteName;
+                } else if (!mergedServers[sId]) {
+                    mergedServers[sId] = "野良サーバー (" + sId.substring(0, 8) + ")";
+                }
+            }
+        }
+
+        servers = mergedServers;
+        localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
+
+        const bootServerSelect = document.getElementById('boot-server-select');
+        if (bootServerSelect) {
+            const currentSelected = bootServerSelect.value || currentServerId;
+            bootServerSelect.innerHTML = "";
+            for (let sId in servers) {
+                bootServerSelect.add(new Option(servers[sId], sId));
+            }
+            if (servers[currentSelected]) {
+                bootServerSelect.value = currentSelected;
+            } else {
+                bootServerSelect.value = currentServerId;
+            }
+        }
+    });
+
     const bootServerSelect = document.getElementById('boot-server-select');
     if (bootServerSelect) {
-        bootServerSelect.innerHTML = "";
-        for (let sId in servers) {
-            bootServerSelect.add(new Option(servers[sId], sId));
-        }
-        bootServerSelect.value = currentServerId;
-        
         bootServerSelect.onchange = function() {
             currentServerId = this.value;
             localStorage.setItem("ServerManager_Current", currentServerId);
             updateShareUrlInput();
             
-            // サーバー切替時に対応するネットワーク設定を即座に反映
             db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
                 const netKey = snapshot.val() || "robutsu";
                 applyNetworkSettings(netKey);
+                setupServerListeners();
             });
         };
     }
 
-    // 初期化時にもネットワークキーを同期
     db.ref(`servers/${currentServerId}/networkKey`).once('value', (snapshot) => {
         const netKey = snapshot.val() || "robutsu";
         applyNetworkSettings(netKey);
+        setupServerListeners();
     });
 
     updateShareUrlInput();
@@ -1545,12 +1585,12 @@ function submitNewServer() {
     let savedServers = localStorage.getItem("ServerManager_Servers");
     let servers = savedServers ? JSON.parse(savedServers) : { "default": "デフォルトサーバー" };
     
-    // サーバー一覧へ新規サーバーを追加して保存
     servers[serverId] = serverName;
     localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
     localStorage.setItem("ServerManager_Current", serverId);
     
-    // 選択されたネットワーク設定をFirebase上のサーバーデータ領域に保存する
+    // Firebaseにサーバー名とネットワーク設定を保存
+    db.ref(`servers/${serverId}/name`).set(serverName);
     db.ref(`servers/${serverId}/networkKey`).set(selectedNetKey);
 
     closeNewServerModal();
@@ -1591,16 +1631,6 @@ function saveShireiName() {
         alert(`指令の名前を「 ${currentShireiName} 」に変更しました`);
     });
 }
-
-getServerDbRef('shirei_name').on('value', (snapshot) => {
-    if (snapshot.exists()) {
-        currentShireiName = snapshot.val();
-        const inputEl = document.getElementById('shirei-name-input');
-        if (inputEl && document.activeElement !== inputEl) {
-            inputEl.value = currentShireiName;
-        }
-    }
-});
 
 function sendShireiExtraDiagram() {
     const selectEl = document.getElementById('shirei-target-train-select');
@@ -1759,6 +1789,10 @@ function endDuty() {
                 document.getElementById('driver-alert-tools').classList.add('hidden');
             }
 
+            const onlineRef = getServerDbRef('online/' + myTrain);
+            onlineRef.set(true);
+            onlineRef.onDisconnect().remove();
+
             getServerDbRef('operations/' + myTrain).once('value', (snapshot) => {
                 const opData = snapshot.val();
                 let trainType = Object.keys(trainTypeSettings)[0];
@@ -1808,37 +1842,22 @@ function endDuty() {
                     document.getElementById('re-train-route-variant').value = routeVariant;
                     document.getElementById('re-start-station').value = startSt;
                     document.getElementById('re-end-station').value = endSt;
-                    document.getElementById('re-via1').value = vias[0];
-                    document.getElementById('re-via2').value = vias[1];
-                    document.getElementById('re-via3').value = vias[2];
+                    document.getElementById('re-via1').value = vias[0] || "";
+                    document.getElementById('re-via2').value = vias[1] || "";
+                    document.getElementById('re-via3').value = vias[2] || "";
+
                     document.getElementById('driver-reselect-area').classList.remove('hidden');
-                } else {
-                    document.getElementById('driver-reselect-area').classList.add('hidden');
+                    document.getElementById('staf-area').classList.remove('hidden');
+                    generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
+                    setTimeout(() => { document.getElementById('staf-area').classList.add('show'); }, 50);
+                } else if (role === 'conductor') {
+                    document.getElementById('staf-area').classList.remove('hidden');
+                    generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
+                    setTimeout(() => { document.getElementById('staf-area').classList.add('show'); }, 50);
                 }
 
-                generateStaf(myTrain, trainType, startSt, endSt, routeVariant, vias, carCount);
-                const stafArea = document.getElementById('staf-area');
-                stafArea.classList.remove('hidden');
-                setTimeout(() => { stafArea.classList.add('show'); }, 50);
-
-                getServerDbRef('operations/' + myTrain).on('value', (s) => {
-                    const val = s.val();
-                    if (!val) return;
-                    if (val.currentStationIndex !== undefined && val.currentStationIndex !== currentStationIndex) {
-                        currentStationIndex = val.currentStationIndex;
-                        renderStafPage();
-                    }
-                });
+                listenExtraDiagramForDriver(myTrain);
             });
-
-            listenExtraDiagramForDriver(myTrain);
-
-            const onlineRef = getServerDbRef('online/' + myTrain);
-            onlineRef.set(true);
-            onlineRef.onDisconnect().remove();
-
-            const operationsRef = getServerDbRef('operations/' + myTrain);
-            operationsRef.onDisconnect().remove();
         }
     };
 </script>
