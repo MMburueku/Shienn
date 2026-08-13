@@ -996,16 +996,6 @@
                 msgTargetSelect.value = currentMsgTargetVal;
             }
         });
-
-        addListener(getServerDbRef('shirei_name'), 'value', (snapshot) => {
-            if (snapshot.exists()) {
-                currentShireiName = snapshot.val();
-                const inputEl = document.getElementById('shirei-name-input');
-                if (inputEl && document.activeElement !== inputEl) {
-                    inputEl.value = currentShireiName;
-                }
-            }
-        });
     }
 
     function saveNgWords() {
@@ -1039,7 +1029,7 @@
     }
 
     function triggerCall() {
-        let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
+        let senderName = userRole === 'shirei' ? currentShireiName : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
         getServerDbRef('call_signal').set({
             sender: senderName,
             timestamp: Date.now()
@@ -1104,8 +1094,8 @@
             }
         }
 
-        let senderName = userRole === 'shirei' ? '指令室' : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
-        let displayTarget = target === 'ALL' ? '【全列車一斉】' : (target === '指令室' ? '【指令室】' : `【${target}】`);
+        let senderName = userRole === 'shirei' ? currentShireiName : `${currentTrainNum} (${userRole === 'driver' ? '運転士' : '車掌'})`;
+        let displayTarget = target === 'ALL' ? '【全列車一斉】' : (target === '指令室' ? `【${currentShireiName}】` : `【${target}】`);
 
         getServerDbRef('comms').push({
             sender: `${senderName} -> ${displayTarget}`,
@@ -1210,6 +1200,7 @@
     initStations();
 
     function startApp() {
+        // ▼ 音声のロック解除処理
         ['call-audio', 'alert-audio', 'alert-clear-audio'].forEach(id => {
             const audio = document.getElementById(id);
             if (audio) {
@@ -1217,7 +1208,7 @@
                 audio.play().then(() => {
                     audio.pause();
                     audio.currentTime = 0;
-                    audio.muted = true; 
+                    audio.muted = false; 
                 }).catch(e => { console.log(`Audio unlock failed (${id}): `, e); });
             }
         });
@@ -1490,7 +1481,6 @@ function copyServerShareUrl() {
     }
 }
 
-// 【変更・修正】Firebaseの /servers 情報を基に、他の人が作成・設定したサーバーも含めて名前を動的に反映させる初期化関数
 function initServerManager() {
     const urlParams = new URLSearchParams(window.location.search);
     const urlServerParam = urlParams.get('server');
@@ -1508,14 +1498,12 @@ function initServerManager() {
         }
     }
 
-    // Firebaseの /servers からサーバー情報を監視し、サーバー名（nameプロパティ等）を反映させる
     db.ref('servers').on('value', (snapshot) => {
         let remoteServers = snapshot.val();
         let mergedServers = { ...servers };
 
         if (remoteServers) {
             for (let sId in remoteServers) {
-                // Firebase上に保存されているサーバー名があればそれを使い、なければデフォルトのフォールバック名を設定
                 let remoteName = remoteServers[sId].name;
                 if (remoteName) {
                     mergedServers[sId] = remoteName;
@@ -1564,6 +1552,14 @@ function initServerManager() {
         setupServerListeners();
     });
 
+    // 端末ごとの指令名をローカルストレージから読み込み
+    const savedShireiName = localStorage.getItem("Local_ShireiName");
+    if (savedShireiName) {
+        currentShireiName = savedShireiName;
+        const inputEl = document.getElementById('shirei-name-input');
+        if (inputEl) inputEl.value = currentShireiName;
+    }
+
     updateShareUrlInput();
 }
 
@@ -1589,7 +1585,6 @@ function submitNewServer() {
     localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
     localStorage.setItem("ServerManager_Current", serverId);
     
-    // Firebaseにサーバー名とネットワーク設定を保存
     db.ref(`servers/${serverId}/name`).set(serverName);
     db.ref(`servers/${serverId}/networkKey`).set(selectedNetKey);
 
@@ -1627,9 +1622,9 @@ function saveShireiName() {
     const nameInput = document.getElementById('shirei-name-input').value.trim();
     if (!nameInput) { alert("指令の名前を入力してください"); return; }
     currentShireiName = nameInput;
-    getServerDbRef('shirei_name').set(nameInput).then(() => {
-        alert(`指令の名前を「 ${currentShireiName} 」に変更しました`);
-    });
+    // 端末ごとのローカルストレージに保存（サーバーへは保存しない）
+    localStorage.setItem("Local_ShireiName", currentShireiName);
+    alert(`指令の名前を「 ${currentShireiName} 」に変更しました`);
 }
 
 function sendShireiExtraDiagram() {
