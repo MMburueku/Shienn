@@ -1545,10 +1545,12 @@ function submitNewServer() {
     let savedServers = localStorage.getItem("ServerManager_Servers");
     let servers = savedServers ? JSON.parse(savedServers) : { "default": "デフォルトサーバー" };
     
+    // サーバー一覧へ新規サーバーを追加して保存
     servers[serverId] = serverName;
     localStorage.setItem("ServerManager_Servers", JSON.stringify(servers));
     localStorage.setItem("ServerManager_Current", serverId);
     
+    // 選択されたネットワーク設定をFirebase上のサーバーデータ領域に保存する
     db.ref(`servers/${serverId}/networkKey`).set(selectedNetKey);
 
     closeNewServerModal();
