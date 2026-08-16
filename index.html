@@ -447,6 +447,8 @@
             <option value="fictional_sumire">すみれヶ丘</option>
             <option value="fictional_c">新霧</option>
             <option value="fictional_d">東阪</option>
+            <option value="fictional_e">舞山</option>
+
         </select>
 
         <div style="display: flex; gap: 4px; margin-top: 10px;">
@@ -830,9 +832,7 @@
         fictional_d: {
             name: "東阪",
             lineColors: {
-                main: { bg: "#0073eb", color: "#fff" },
-                hokuto: { bg: "#6AA84F", color: "#fff" },
-                branch: { bg: "#e67e22", color: "#fff" }            
+                main: { bg: "#0073eb", color: "#fff" }           
             },
             defaultLineColor: { bg: "#4A90E2", color: "#fff" },
             lines: {
@@ -845,7 +845,26 @@
                 "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
             }
+        },
+        fictional_e: {
+            name: "舞山",
+            lineColors: {
+                main: { bg: "#0073eb", color: "#fff" }            
+            },
+            defaultLineColor: { bg: "#4A90E2", color: "#fff" },
+            lines: {
+                main: ["舞山", "新舞山", "安小", "鳴田", "芽蒲", "池ノ上", "赤川", "那津", "西堀理", "堀理", "山谷", "大日古部", "中台", "輪厚"]
+            },
+            trainTypeSettings: {
+                "普通": { stopRule: "ALL", bg: "#A19B94", color: "#ffffff" },
+                "快速": { stopRule: ["舞山", "安小", "芽蒲", "池ノ上", "那津", "堀理", "中台", "輪厚"], bg: "#5599FD", color: "#ffffff" },
+　　　　　　　　"特急": { stopRule: ["舞山", "芽蒲", "堀理", "輪厚"], bg: "#FD5655", color: "#ffffff" },
+                "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
+            }
         }
+
     };
 
     let currentNetworkKey = "robutsu";
