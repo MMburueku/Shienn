@@ -448,6 +448,7 @@
             <option value="fictional_c">新霧</option>
             <option value="fictional_d">東阪</option>
             <option value="fictional_e">舞山</option>
+            <option value="fictional_f">東北</option>
 
         </select>
 
@@ -859,6 +860,24 @@
                 "普通": { stopRule: "ALL", bg: "#A19B94", color: "#ffffff" },
                 "快速": { stopRule: ["舞山", "安小", "芽蒲", "池ノ上", "那津", "堀理", "中台", "輪厚"], bg: "#5599FD", color: "#ffffff" },
 　　　　　　　　"特急": { stopRule: ["舞山", "芽蒲", "堀理", "輪厚"], bg: "#FD5655", color: "#ffffff" },
+                "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
+                "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
+            }
+        },
+        fictional_f: {
+            name: "東北",
+            lineColors: {
+                main: { bg: "#008000", color: "#fff" }            
+            },
+            defaultLineColor: { bg: "#4A90E2", color: "#fff" },
+            lines: {
+                main: ["東京", "上野", "大宮", "小山", "宇都宮", "那須塩原", "新白河", "郡山", "福島", "白石蔵王", "仙台"]
+            },
+            trainTypeSettings: {
+                "やまなみ": { stopRule: "ALL", bg: "#008000", color: "#ffffff" },
+                "つぐみ": { stopRule: ["東京", "上野", "大宮", "宇都宮", "郡山", "福島"], bg: "#F58220", color: "#ffffff" },
+　　　　　　　　"かすみ": { stopRule: ["東京", "上野", "大宮", "仙台"], bg: "#E761A4", color: "#ffffff" },
                 "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
