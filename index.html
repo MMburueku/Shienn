@@ -449,7 +449,6 @@
             <option value="fictional_d">東阪</option>
             <option value="fictional_e">舞山</option>
             <option value="fictional_f">東北</option>
-
         </select>
 
         <div style="display: flex; gap: 4px; margin-top: 10px;">
@@ -495,13 +494,13 @@
         </div>
         <input type="hidden" id="role-select" value="driver">
 
-<div class="ng-config-box" style="margin-top: 6px;">
-    <div style="font-weight: bold; margin-bottom: 2px; color: #FFD700;">⚙️ 指令室設定</div>
-    <div style="display: flex; gap: 4px;">
-        <input id="shirei-name-input" placeholder="指令の名前（例: 東京指令）" style="margin:0; padding:4px; font-size:11px; background:#0b1929; color:#fff; border:1px solid #444;">
-        <button onclick="saveShireiName()" style="background:#0073eb; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:auto; padding:4px 8px; font-size:11px;">名前変更</button>
-    </div>
-</div>
+        <div class="ng-config-box" style="margin-top: 6px;">
+            <div style="font-weight: bold; margin-bottom: 2px; color: #FFD700;">⚙️ 指令室設定</div>
+            <div style="display: flex; gap: 4px;">
+                <input id="shirei-name-input" placeholder="指令の名前（例: 東京指令）" style="margin:0; padding:4px; font-size:11px; background:#0b1929; color:#fff; border:1px solid #444;">
+                <button onclick="saveShireiName()" style="background:#0073eb; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; width:auto; padding:4px 8px; font-size:11px;">名前変更</button>
+            </div>
+        </div>
 
         <div id="train-input-container">
             <label style="font-size:0.8em; text-align:left; display:block;">担当列車番号 (自由入力可能):</label>
@@ -557,6 +556,19 @@
             <select id="active-trains-select"></select>
             <button onclick="removeSpecificAlert()">選択列車の個別解除</button>
             <button onclick="resetAlert()" style="background: #f00; color: #fff;">全解除</button>
+        </div>
+
+        <!-- 追加：列車個別 抑止制御（音声なし） -->
+        <div id="shirei-yokushi-tool" class="hidden" style="background: #2a1515; border: 1px solid #d9534f; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px;">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #ff9999;">🛑 列車個別 抑止制御（音声なし）</div>
+            
+            <label style="font-size:0.8em; display:block; color: #fff;">対象列車を選択:</label>
+            <select id="shirei-yokushi-train-select" style="width:100%; margin:2px 0; font-size:11px; background:#0b1929; color:#fff;"></select>
+            
+            <div style="display: flex; gap: 4px; margin-top: 4px;">
+                <button onclick="sendTrainYokushi(true)" style="background:#d9534f; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; flex:1; padding:6px;">抑止発令</button>
+                <button onclick="sendTrainYokushi(false)" style="background:#555; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold; flex:1; padding:6px;">抑止解除</button>
+            </div>
         </div>
 
         <div id="shirei-inside-extra-tool" class="hidden" style="background: #15293d; border: 1px solid #FFD700; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px;">
@@ -859,7 +871,7 @@
             trainTypeSettings: {
                 "普通": { stopRule: "ALL", bg: "#A19B94", color: "#ffffff" },
                 "快速": { stopRule: ["舞山", "安小", "芽蒲", "池ノ上", "那津", "堀理", "中台", "輪厚"], bg: "#5599FD", color: "#ffffff" },
-　　　　　　　　"特急": { stopRule: ["舞山", "芽蒲", "堀理", "輪厚"], bg: "#FD5655", color: "#ffffff" },
+        "特急": { stopRule: ["舞山", "芽蒲", "堀理", "輪厚"], bg: "#FD5655", color: "#ffffff" },
                 "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
@@ -877,7 +889,7 @@
             trainTypeSettings: {
                 "やまなみ": { stopRule: "ALL", bg: "#008000", color: "#ffffff" },
                 "つぐみ": { stopRule: ["東京", "上野", "大宮", "宇都宮", "郡山", "福島"], bg: "#F58220", color: "#ffffff" },
-　　　　　　　　"かすみ": { stopRule: ["東京", "上野", "大宮", "仙台"], bg: "#E761A4", color: "#ffffff" },
+        "かすみ": { stopRule: ["東京", "上野", "大宮", "仙台"], bg: "#E761A4", color: "#ffffff" },
                 "臨時": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "回送": { stopRule: [], bg: "#ffffff", color: "#ff0000" },
                 "試運転": { stopRule: [], bg: "#ffffff", color: "#ff0000" }
@@ -921,7 +933,6 @@
             }
         });
         
-        // 選択肢更新後に連動処理を実行
         onTrainTypeChange();
         onReTrainTypeChange();
     }
@@ -1031,9 +1042,11 @@
             const shireiSelect = document.getElementById('active-trains-select');
             const msgTargetSelect = document.getElementById('msg-target-select');
             const shireiTargetSelect = document.getElementById('shirei-target-train-select');
+            const shireiYokushiSelect = document.getElementById('shirei-yokushi-train-select');
             
             if(shireiSelect) shireiSelect.innerHTML = '';
             if(shireiTargetSelect) shireiTargetSelect.innerHTML = '';
+            if(shireiYokushiSelect) shireiYokushiSelect.innerHTML = '';
             
             let currentMsgTargetVal = msgTargetSelect ? msgTargetSelect.value : "指令室";
             if(msgTargetSelect) {
@@ -1054,6 +1067,7 @@
             trainIdSet.forEach(trainId => {
                 if(shireiSelect) shireiSelect.add(new Option(trainId, trainId));
                 if(shireiTargetSelect) shireiTargetSelect.add(new Option(trainId, trainId));
+                if(shireiYokushiSelect) shireiYokushiSelect.add(new Option(trainId, trainId));
                 if(msgTargetSelect) {
                     msgTargetSelect.add(new Option(`${trainId} へ送信`, trainId));
                 }
@@ -1144,6 +1158,41 @@
     function resetAlert() {
         getServerDbRef('alert').set({
             ALL: { type: 'CLEARED', timestamp: Date.now() }
+        });
+    }
+
+    function sendTrainYokushi(isYokushi) {
+        const selectEl = document.getElementById('shirei-yokushi-train-select');
+        const trainId = selectEl.value;
+        if (!trainId) { alert("対象列車を選択してください"); return; }
+        
+        getServerDbRef('train_yokushi/' + trainId).set({
+            yokushi: isYokushi,
+            timestamp: Date.now()
+        });
+        alert(`列車 ${trainId} へ抑止を${isYokushi ? '発令' : '解除'}しました。`);
+    }
+
+    function listenYokushiForDriver(trainNum) {
+        getServerDbRef('train_yokushi/' + trainNum).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const timeStr = new Date(data.timestamp).toLocaleTimeString();
+                const logEl = document.getElementById('comms-log');
+                if (data.yokushi) {
+                    if (logEl) {
+                        logEl.innerHTML += `<br><span style="color: #ff4444;">[${timeStr}] 🛑 【抑止発令】ただちに列車を停止してください！</span>`;
+                        logEl.scrollTop = logEl.scrollHeight;
+                    }
+                    alert(`【🚨 抑止発令】\n指令室より抑止指示が出されました。ただちに列車を停止してください。`);
+                } else {
+                    if (logEl) {
+                        logEl.innerHTML += `<br><span style="color: #44cc44;">[${timeStr}] ✅ 【抑止解除】運転再開が許可されました。</span>`;
+                        logEl.scrollTop = logEl.scrollHeight;
+                    }
+                    alert(`【✅ 抑止解除】\n抑止が解除されました。運転を再開してください。`);
+                }
+            }
         });
     }
 
@@ -1266,7 +1315,6 @@
     }
     initStations();
 
-    // 系統選択時に始発・終着駅を自動設定する関数
     function autofillStationsByTrainType(typeSelectId, startSelectId, endSelectId) {
         if (currentNetworkKey !== "fictional_d") return;
         const typeVal = document.getElementById(typeSelectId).value;
@@ -1436,7 +1484,6 @@
         const typeConfig = trainTypeSettings[trainType];
         const stopRule = typeConfig ? typeConfig.stopRule : "ALL";
 
-        // 系統（芝鷺ネットワークなど）でstopRuleが配列の場合は、その駅のみを表示・使用する
         if (currentNetworkKey === "fictional_d" && stopRule && Array.isArray(stopRule) && stopRule.length > 0) {
             stationList = [...stopRule];
         } else {
@@ -1453,7 +1500,6 @@
                 }
             }
 
-            // 特殊ルール：「新橋通りは昔池区役所前方面は通過にして」対応 (3C系統など)
             if (trainType === "3C系統" && stName === "新橋通り") {
                 isPass = true;
             }
@@ -1866,6 +1912,7 @@ function endDuty() {
 
         if (role === 'shirei') {
             document.getElementById('shirei-tools').classList.remove('hidden');
+            document.getElementById('shirei-yokushi-tool').classList.remove('hidden');
             document.getElementById('shirei-inside-extra-tool').classList.remove('hidden');
             document.getElementById('driver-alert-tools').classList.add('hidden');
             document.getElementById('staf-area').classList.add('hidden');
@@ -1876,6 +1923,7 @@ function endDuty() {
             shireiOnlineRef.onDisconnect().remove();
         } else {
             document.getElementById('shirei-tools').classList.add('hidden');
+            document.getElementById('shirei-yokushi-tool').classList.add('hidden');
             document.getElementById('shirei-inside-extra-tool').classList.add('hidden');
             if (role === 'driver' || role === 'conductor') {
                 document.getElementById('driver-alert-tools').classList.remove('hidden');
@@ -1951,6 +1999,7 @@ function endDuty() {
                 }
 
                 listenExtraDiagramForDriver(myTrain);
+                listenYokushiForDriver(myTrain);
             });
         }
     };
